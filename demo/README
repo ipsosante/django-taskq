@@ -1,6 +1,6 @@
 In one terminal, run:
 
-    ./manage.py taskq_run_worker
+    ./manage.py taskqrunworker
 
 In another terminal:
 

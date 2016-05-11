@@ -1,4 +1,4 @@
 from taskq.tools import taskify
 
 @taskify()
-def add1(self, x, y):
+def add(self, x, y):
