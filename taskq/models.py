@@ -29,6 +29,5 @@ class Task(models.Model):
     class Meta:
         db_table = 'tasks_tasks'
 
-    # def __str__(self):
-    #     return '{0.uuid} status={0.status} name={0.function_name} args={0.function_args}'.format(self)
-    #     return 'object <name:{}> <id:{}> <retries:{}>'.format(self.name, self._task_id, self._retries)
+    def __str__(self):
+        return '<Task: {name} : {uuid}>'.format(name=self.name, uuid=self.uuid)
