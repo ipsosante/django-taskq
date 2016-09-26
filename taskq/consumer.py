@@ -3,6 +3,7 @@ import uuid
 import threading
 import importlib
 import logging
+
 from time import sleep
 
 from django.conf import settings
@@ -62,7 +63,7 @@ class Consumer(threading.Thread):
                 if not scheduled_task.is_due():
                     continue
 
-                due_at = timezone.make_aware(scheduled_task.due_at, timezone.get_current_timezone())
+                due_at = scheduled_task.due_at
                 scheduled_task.update_due_at()
 
                 tmp = TaskModel.objects.filter(name=scheduled_task_name, due_at=due_at)

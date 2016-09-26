@@ -1,5 +1,6 @@
 import datetime
 
+from django.utils import timezone
 from croniter import croniter
 
 
@@ -15,13 +16,13 @@ class ScheduledTask(object):
 
     def update_due_at(self):
 
-        now = datetime.datetime.now()
+        now = timezone.now()
         cron = croniter(self.cron, now)
         self.due_at = cron.get_next(datetime.datetime)
 
     def is_due(self):
 
-        now = datetime.datetime.now()
+        now = timezone.now()
         return (self.due_at - now).total_seconds() < 0
 
 
