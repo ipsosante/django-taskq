@@ -38,3 +38,7 @@ class Retry(TaskControlException):
 
 class Cancel(TaskControlException):
     pass
+
+
+class TaskFatalError(Exception):
+    pass

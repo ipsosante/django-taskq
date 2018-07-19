@@ -12,7 +12,7 @@ from django.utils import timezone
 from taskq.scheduler import Scheduler
 from taskq.models import Task as TaskModel
 from taskq.json import JSONDecoder, JSONEncoder
-from taskq.exceptions import Retry, Cancel
+from taskq.exceptions import Retry, Cancel, TaskFatalError
 from taskq.task import Taskify
 
 logger = logging.getLogger('taskq')
@@ -106,11 +106,16 @@ class Consumer(threading.Thread):
 
         try:
             function = import_function(task.function_name)
-        except Exception:
-            raise Exception("Unable to find task function.")
+        except ImportError as e:
+            logger.error(str(e))
+            task.status = TaskModel.STATUS_FAILED
+            task.save()
+            raise TaskFatalError('Unable to find task function "%s"' % task.function_name)
 
         if not isinstance(function, Taskify):
-            raise Exception("Function is not a task.")
+            task.status = TaskModel.STATUS_FAILED
+            task.save()
+            raise TaskFatalError('Function "%s" is not a task' % task.function_name)
 
         args = json.loads(task.function_args, cls=JSONDecoder)
 
