@@ -14,12 +14,17 @@ class Migration(migrations.Migration):
     operations = [
         migrations.AddField(
             model_name='task',
-            name='exponential_backoff',
+            name='retry_backoff',
             field=models.BooleanField(default=False),
         ),
         migrations.AddField(
             model_name='task',
             name='retry_delay',
             field=models.DurationField(null=True, default=None),
+        ),
+        migrations.AddField(
+            model_name='task',
+            name='retry_backoff_factor',
+            field=models.IntegerField(default=2),
         ),
     ]

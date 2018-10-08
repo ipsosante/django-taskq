@@ -1,9 +1,7 @@
 from django.db import models
-from django.utils.datetime_safe import datetime
 
 
 class Task(models.Model):
-
     STATUS_QUEUED = 0  # Task was received and waiting to be run
     STATUS_RUNNING = 1  # Task was started by a worker
     STATUS_SUCCESS = 2  # Task succeeded
@@ -26,9 +24,9 @@ class Task(models.Model):
     status = models.IntegerField(default=STATUS_QUEUED, choices=STATUS_QUEUED)
     retries = models.IntegerField(null=False, default=0)
     max_retries = models.IntegerField(null=False, default=None)
-    retry_delay = models.DurationField(null=True, default = None)
-    exponential_backoff = models.BooleanField(null=False, default=False)
-
+    retry_delay = models.DurationField(null=True, default=None)
+    retry_backoff = models.BooleanField(null=False, default=False)
+    retry_backoff_factor = models.IntegerField(null=False, default=2)
 
     class Meta:
         db_table = 'tasks_tasks'

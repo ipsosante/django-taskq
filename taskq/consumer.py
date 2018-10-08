@@ -80,8 +80,9 @@ class Consumer(threading.Thread):
                 task.function_name = scheduled_task.task
                 task.function_args = json.dumps(scheduled_task.args, cls=JSONEncoder)
                 task.max_retries = scheduled_task_name.max_retries
-                task.retry_delay = scheduled_task_name.countdown
-                task.exponential_backoff = scheduled_task_name.exponential_backoff
+                task.retry_delay = scheduled_task_name.retry_delay
+                task.retry_backoff = scheduled_task_name.retry_backoff
+                task.retry_backoff_factor = scheduled_task_name.retry_backoff_factor
                 task.save()
 
             # ...
@@ -149,7 +150,13 @@ class Consumer(threading.Thread):
                 task.max_retries = e.max_retries
 
             if 'retry_delay' in e:
-                task.retry_delay = e.retry_delay
+                task.retry_delay = e.retry_delay if isinstance(e.retry_delay, datetime.timedelta) else datetime.timedelta(seconds = e.retry_delay)
+
+            if 'retry_backoff' in e:
+                task.retry_backoff = e.retry_backoff
+
+            if 'retry_backoff_factor' in e:
+                task.retry_backoff_factor = e.retry_backoff_factor
 
             if 'args' in e or 'kwargs' in e:
                 raise NotImplementedError()
@@ -162,10 +169,9 @@ class Consumer(threading.Thread):
 
             else:
                 if task.retry_delay:
-                    if not task.exponential_backoff:
-                        delay = task.retry_delay
-                    else:
-                        delay = datetime.timedelta(seconds = task.countdown.total_seconds() ** task.retries)
+                    delay = task.retry_delay
+                    if task.retry_backoff:
+                        delay = datetime.timedelta(seconds = delay.total_seconds() * (task.retry_backoff_factor ** task.retries))
                     task.due_at = timezone.now() + delay
 
                 task.status = TaskModel.STATUS_QUEUED
