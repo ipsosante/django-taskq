@@ -61,7 +61,7 @@ class Taskify(object):
 
         self._function(**kwargs)
 
-    def apply_async(self, due_at=None, args=[], kwargs={}):
+    def apply_async(self, due_at=None, max_retries=3, args=[], kwargs={}):
 
         task_args = inspect.getargspec(self._function).args
 
@@ -84,7 +84,7 @@ class Taskify(object):
         task.status = TaskModel.STATUS_QUEUED
         task.function_name = func_name
         task.function_args = json.dumps(kwargs, cls=JSONEncoder)
-        task.max_retries = 3
+        task.max_retries = max_retries
         task.save()
 
         return task

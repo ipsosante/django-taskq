@@ -146,7 +146,7 @@ class Consumer(threading.Thread):
                 task.max_retries = e.max_retries
 
             if 'countdown' in e:
-                raise NotImplementedError()
+                task.due_at = timezone.now() + e.countdown
 
             if 'args' in e or 'kwargs' in e:
                 raise NotImplementedError()
