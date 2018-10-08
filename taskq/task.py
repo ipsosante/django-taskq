@@ -61,7 +61,7 @@ class Taskify(object):
 
         self._function(**kwargs)
 
-    def apply_async(self, due_at=None, max_retries=3, retry_delay=None, retry_backoff=False, retry_backoff_factor=2, args=[], kwargs={}):
+    def apply_async(self, due_at=None, max_retries=3, retry_delay=0, retry_backoff=False, retry_backoff_factor=2, args=[], kwargs={}):
 
         task_args = inspect.getargspec(self._function).args
 
@@ -85,7 +85,7 @@ class Taskify(object):
         task.function_name = func_name
         task.function_args = json.dumps(kwargs, cls=JSONEncoder)
         task.max_retries = max_retries
-        task.retry_delay = retry_delay if (retry_delay and isinstance(retry_delay, datetime.timedelta)) else datetime.timedelta(seconds = retry_delay)
+        task.retry_delay = retry_delay if isinstance(retry_delay, datetime.timedelta) else datetime.timedelta(seconds = retry_delay)
         task.retry_backoff = retry_backoff
         task.retry_backoff_factor = retry_backoff_factor
         task.save()
