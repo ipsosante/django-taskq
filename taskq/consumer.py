@@ -171,7 +171,7 @@ class Consumer(threading.Thread):
                 if task.retry_delay:
                     delay = task.retry_delay
                     if task.retry_backoff:
-                        delay = datetime.timedelta(seconds = delay.total_seconds() * (task.retry_backoff_factor ** task.retries))
+                        delay = datetime.timedelta(seconds = delay.total_seconds() * (task.retry_backoff_factor ** (task.retries-1)))
                     task.due_at = timezone.now() + delay
 
                 task.status = TaskModel.STATUS_QUEUED
