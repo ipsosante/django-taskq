@@ -1,3 +1,4 @@
+import datetime
 import json
 import uuid
 import threading
@@ -78,7 +79,9 @@ class Consumer(threading.Thread):
                 task.status = TaskModel.STATUS_QUEUED
                 task.function_name = scheduled_task.task
                 task.function_args = json.dumps(scheduled_task.args, cls=JSONEncoder)
-                task.max_retries = 3
+                task.max_retries = scheduled_task_name.max_retries
+                task.retry_delay = scheduled_task_name.countdown
+                task.exponential_backoff = scheduled_task_name.exponential_backoff
                 task.save()
 
             # ...
@@ -145,8 +148,8 @@ class Consumer(threading.Thread):
             if 'max_retries' in e:
                 task.max_retries = e.max_retries
 
-            if 'countdown' in e:
-                task.due_at = timezone.now() + e.countdown
+            if 'retry_delay' in e:
+                task.retry_delay = e.retry_delay
 
             if 'args' in e or 'kwargs' in e:
                 raise NotImplementedError()
@@ -158,6 +161,12 @@ class Consumer(threading.Thread):
                 task.status = TaskModel.STATUS_FAILED
 
             else:
+                if task.retry_delay:
+                    if not task.exponential_backoff:
+                        delay = task.retry_delay
+                    else:
+                        delay = datetime.timedelta(seconds = task.countdown.total_seconds() ** task.retries)
+                    task.due_at = timezone.now() + delay
 
                 task.status = TaskModel.STATUS_QUEUED
 
