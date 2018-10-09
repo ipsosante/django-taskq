@@ -1,14 +1,15 @@
-import uuid
+import datetime
 import inspect
+import json
 import logging
 import sys
-import json
-
-from taskq.json import JSONEncoder
-from taskq.models import Task as TaskModel
-from taskq.exceptions import Retry, Cancel
+import uuid
 
 from django.utils import timezone
+
+from taskq.exceptions import Retry, Cancel
+from taskq.json import JSONEncoder
+from taskq.models import Task as TaskModel
 
 logger = logging.getLogger('taskq')
 
@@ -20,7 +21,6 @@ class TaskifyRunContext(object):
 
 
 class Taskify(object):
-
     _name = None
     _function = None
 
@@ -61,7 +61,7 @@ class Taskify(object):
 
         self._function(**kwargs)
 
-    def apply_async(self, due_at=None, args=[], kwargs={}):
+    def apply_async(self, due_at=None, max_retries=3, retry_delay=0, retry_backoff=False, retry_backoff_factor=2, args=[], kwargs={}):
 
         task_args = inspect.getargspec(self._function).args
 
@@ -84,14 +84,16 @@ class Taskify(object):
         task.status = TaskModel.STATUS_QUEUED
         task.function_name = func_name
         task.function_args = json.dumps(kwargs, cls=JSONEncoder)
-        task.max_retries = 3
+        task.max_retries = max_retries
+        task.retry_delay = retry_delay if isinstance(retry_delay, datetime.timedelta) else datetime.timedelta(seconds = retry_delay)
+        task.retry_backoff = retry_backoff
+        task.retry_backoff_factor = retry_backoff_factor
         task.save()
 
         return task
 
 
 def taskify(*args, **kwargs):
-
     def _taskify(func):
         return Taskify(func, **kwargs)
 
