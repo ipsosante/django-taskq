@@ -6,11 +6,15 @@ from croniter import croniter
 
 class ScheduledTask(object):
 
-    def __init__(self, task=None, cron=None, args=None):
+    def __init__(self, task, cron, args=None, max_retries=3, retry_delay=0, retry_backoff=False, retry_backoff_factor=2):
 
         self.task = task
-        self.args = args
+        self.args = args if args else {}
         self.cron = cron
+        self.max_retries = max_retries
+        self.retry_delay = retry_delay if isinstance(retry_delay, datetime.timedelta) else datetime.timedelta(seconds = retry_delay)
+        self.retry_backoff = retry_backoff
+        self.retry_backoff_factor = retry_backoff_factor
 
         self.update_due_at()
 
@@ -32,5 +36,5 @@ class Scheduler(object):
 
     def __init__(self, config):
 
-        for key, value in config.items():
-            self.tasks[key] = ScheduledTask(value['task'], value['cron'], value['args'])
+        for task_name, task_config in config.items():
+            self.tasks[task_name] = ScheduledTask(**task_config)

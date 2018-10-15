@@ -25,7 +25,7 @@ class Task(models.Model):
     due_at = models.DateTimeField(null=False)
     status = models.IntegerField(default=STATUS_QUEUED, choices=STATUS_QUEUED)
     retries = models.IntegerField(null=False, default=0)
-    max_retries = models.IntegerField(null=False, default=None)
+    max_retries = models.IntegerField(null=False, default=3)
     retry_delay = models.DurationField(null=False, default=datetime.timedelta(seconds=0))
     retry_backoff = models.BooleanField(null=False, default=False)
     retry_backoff_factor = models.IntegerField(null=False, default=2)

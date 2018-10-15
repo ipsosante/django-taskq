@@ -79,10 +79,10 @@ class Consumer(threading.Thread):
                 task.status = TaskModel.STATUS_QUEUED
                 task.function_name = scheduled_task.task
                 task.function_args = json.dumps(scheduled_task.args, cls=JSONEncoder)
-                task.max_retries = scheduled_task.task.max_retries
-                task.retry_delay = scheduled_task.task.retry_delay
-                task.retry_backoff = scheduled_task.task.retry_backoff
-                task.retry_backoff_factor = scheduled_task.task.retry_backoff_factor
+                task.max_retries = scheduled_task.max_retries
+                task.retry_delay = scheduled_task.retry_delay
+                task.retry_backoff = scheduled_task.retry_backoff
+                task.retry_backoff_factor = scheduled_task.retry_backoff_factor
                 task.save()
 
             # ...
