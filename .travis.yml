@@ -1,0 +1,14 @@
+language: python
+python:
+  - "3.6"
+  - "3.7-dev"  # 3.7 development branch
+
+before_script:
+  # stop the build if there are linting errors
+  - flake8 .
+
+install:
+  - pip install -r requirements_test.txt
+
+script:
+  - python runtests.py
