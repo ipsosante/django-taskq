@@ -52,4 +52,6 @@ class Task(models.Model):
         return json.loads(self.function_args, cls=JSONDecoder)
 
     def __str__(self):
-        return '<Task: {name} : {uuid}>'.format(name=self.name, uuid=self.uuid)
+        s = f'{self.name}, ' if self.name else ''
+        s += str(self.uuid)
+        return s
