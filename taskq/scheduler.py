@@ -3,6 +3,8 @@ import datetime
 from django.utils import timezone
 from croniter import croniter
 
+from .utils import delay_timedelta
+
 
 class ScheduledTask(object):
 
@@ -12,7 +14,7 @@ class ScheduledTask(object):
         self.args = args if args else {}
         self.cron = cron
         self.max_retries = max_retries
-        self.retry_delay = retry_delay if isinstance(retry_delay, datetime.timedelta) else datetime.timedelta(seconds = retry_delay)
+        self.retry_delay = delay_timedelta(retry_delay)
         self.retry_backoff = retry_backoff
         self.retry_backoff_factor = retry_backoff_factor
 

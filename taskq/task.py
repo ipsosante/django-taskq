@@ -1,4 +1,3 @@
-import datetime
 import inspect
 import json
 import logging
@@ -6,9 +5,10 @@ import sys
 
 from django.utils import timezone
 
-from taskq.exceptions import Retry, Cancel
-from taskq.json import JSONEncoder
-from taskq.models import Task as TaskModel
+from .exceptions import Retry, Cancel
+from .json import JSONEncoder
+from .models import Task as TaskModel
+from .utils import delay_timedelta
 
 logger = logging.getLogger('taskq')
 
@@ -83,7 +83,7 @@ class Taskify(object):
         task.function_name = func_name
         task.function_args = json.dumps(kwargs, cls=JSONEncoder)
         task.max_retries = max_retries
-        task.retry_delay = retry_delay if isinstance(retry_delay, datetime.timedelta) else datetime.timedelta(seconds = retry_delay)
+        task.retry_delay = delay_timedelta(retry_delay)
         task.retry_backoff = retry_backoff
         task.retry_backoff_factor = retry_backoff_factor
         task.save()
