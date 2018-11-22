@@ -1,176 +1,175 @@
 import datetime
-import json
 import threading
-import importlib
 import logging
+import time
 
 from time import sleep
 
 from django.conf import settings
+from django.db import transaction
 from django.utils import timezone
 
-from taskq.scheduler import Scheduler
-from taskq.models import Task as TaskModel
-from taskq.json import JSONDecoder, JSONEncoder
-from taskq.exceptions import Retry, Cancel, TaskFatalError
-from taskq.task import Taskify
+from .scheduler import Scheduler
+from .models import Task
+from .exceptions import Retry, Cancel, TaskLoadingError
+from .task import Taskify
+from .utils import import_function, delay_timedelta
 
 logger = logging.getLogger('taskq')
 
 
 class Consumer(threading.Thread):
-    """
-    Executes tasks when they are due.
-    """
+    """Executes tasks when they are due."""
 
-    SLEEP_RATE = 10  # In seconds
+    DEFAULT_SLEEP_RATE = 10  # In seconds
 
-    def __init__(self):
-        threading.Thread.__init__(self)
-        self.setDaemon(True)
+    # You probably don't want to change default default sleep rate, it's only
+    # useful when testing.
+    def __init__(self, sleep_rate=DEFAULT_SLEEP_RATE):
+        super().__init__()
+        self.daemon = True
+        timestamp = int(time.time())
+        self.name = f"TaskqConsumer-{timestamp}"
+
+        self._sleep_rate = sleep_rate
         self._should_stop = threading.Event()
 
     def stop(self):
         self._should_stop.set()
 
+    @property
     def stopped(self):
         return self._should_stop.is_set()
 
     def run(self):
+        """The main entry point to start the consumer."""
+        self.reset_running_tasks()
 
-        # Reset
+        scheduler = self.get_scheduler()
+        self.run_loop(scheduler)
 
-        tasks = TaskModel.objects.filter(status=TaskModel.STATUS_RUNNING)
-        for task in tasks:
-            task.status = TaskModel.STATUS_QUEUED
+    def reset_running_tasks(self):
+        tasks = Task.objects.filter(status=Task.STATUS_RUNNING)
+        tasks.update(status=Task.STATUS_QUEUED)
+
+    def get_scheduler(self):
+        if not hasattr(settings, 'TASKQ'):
+            schedule = {}
+        else:
+            schedule = settings.TASKQ.get('schedule', {})
+
+        return Scheduler(schedule)
+
+    def run_loop(self, scheduler):
+        while not self.stopped:
+            self.create_scheduled_tasks(scheduler)
+            self.execute_tasks()
+
+            sleep(self._sleep_rate)
+
+    def create_scheduled_tasks(self, scheduler):
+        """Register new tasks for each scheduled (recurring) tasks defined in
+        the project settings.
+        """
+        for scheduled_task_name, scheduled_task in scheduler.tasks.items():
+            if not scheduled_task.is_due():
+                continue
+
+            due_at = scheduled_task.due_at
+            scheduled_task.update_due_at()
+
+            task_exists = Task.objects.filter(
+                name=scheduled_task_name,
+                due_at=due_at
+            ).exists()
+
+            if task_exists:
+                continue
+
+            task = Task()
+            task.name = scheduled_task_name
+            task.due_at = due_at
+            task.status = Task.STATUS_QUEUED
+            task.function_name = scheduled_task.task
+            task.encode_function_args(scheduled_task.args)
+            task.max_retries = scheduled_task.max_retries
+            task.retry_delay = scheduled_task.retry_delay
+            task.retry_backoff = scheduled_task.retry_backoff
+            task.retry_backoff_factor = scheduled_task.retry_backoff_factor
             task.save()
 
-        # ...
+    def execute_tasks(self):
+        due_tasks = Task.objects.filter(
+            status=Task.STATUS_QUEUED,
+            due_at__lte=timezone.now()
+        )
 
-        if hasattr(settings, 'TASKQ') and settings.TASKQ['schedule']:
-            schedule = settings.TASKQ['schedule']
-        else:
-            schedule = {}
-
-        scheduler = Scheduler(schedule)
-
-        # ...
-
-        while not self.stopped():
-
-            for scheduled_task_name, scheduled_task in scheduler.tasks.items():
-
-                if not scheduled_task.is_due():
-                    continue
-
-                due_at = scheduled_task.due_at
-                scheduled_task.update_due_at()
-
-                tmp = TaskModel.objects.filter(name=scheduled_task_name, due_at=due_at)
-
-                if len(tmp):
-                    continue
-
-                task = TaskModel()
-                task.name = scheduled_task_name
-                task.due_at = due_at
-                task.status = TaskModel.STATUS_QUEUED
-                task.function_name = scheduled_task.task
-                task.function_args = json.dumps(scheduled_task.args, cls=JSONEncoder)
-                task.max_retries = scheduled_task.max_retries
-                task.retry_delay = scheduled_task.retry_delay
-                task.retry_backoff = scheduled_task.retry_backoff
-                task.retry_backoff_factor = scheduled_task.retry_backoff_factor
-                task.save()
-
-            # ...
-
-            tasks = TaskModel.objects.filter(status=TaskModel.STATUS_QUEUED, due_at__lte=timezone.now())
-
-            for task in tasks:
-
-                self.process_task(task)
-
-            to_sleep = Consumer.SLEEP_RATE
-            sleep(to_sleep)
+        for due_task in due_tasks:
+            self.process_task(due_task)
 
     def process_task(self, task):
+        """Load and execute the task"""
+        logger.info('%s : Started', task)
 
-        logger.info('Task (%s) : Run', task)
-
-        task.status = TaskModel.STATUS_RUNNING
+        task.status = Task.STATUS_RUNNING
         task.save()
 
-        def import_function(name):
-            module_path, comp = name.rsplit('.', 1)
-            module = importlib.import_module(module_path)
-            return getattr(module, comp)
-
         try:
-            function = import_function(task.function_name)
-        except (ImportError, SyntaxError) as e:
-            logger.error(str(e))
-            task.status = TaskModel.STATUS_FAILED
-            task.save()
-            raise TaskFatalError('Unable to import task function "%s"' % task.function_name)
-
-        if not isinstance(function, Taskify):
-            task.status = TaskModel.STATUS_FAILED
-            task.save()
-            raise TaskFatalError('Function "%s" is not a task' % task.function_name)
-
-        args = json.loads(task.function_args, cls=JSONDecoder)
-
-        try:
-
-            from django.db import transaction
-
-            with transaction.atomic():
-                function.__protected_call__(task, args)
-
-            task.status = TaskModel.STATUS_SUCCESS
-            task.save()
-
-        except Cancel as e:
-
-            logger.info('Task (%s) : Canceled', task)
-
-            task.status = TaskModel.STATUS_REVOKED
-            task.save()
-
-        except Retry as e:
-
-            logger.info('Task (%s) : Failed', task)
+            function, args = self.load_task(task)
+            self.execute_task(function, args)
+            task.status = Task.STATUS_SUCCESS
+        except Cancel:
+            logger.info('%s : Canceled', task)
+            task.status = Task.STATUS_CANCELED
+        except Retry as retry:
+            logger.info('%s : Failed (will retry)', task)
 
             task.retries += 1
 
-            if 'max_retries' in e:
-                task.max_retries = e.max_retries
+            if 'max_retries' in retry:
+                task.max_retries = retry.max_retries
 
-            if 'retry_delay' in e:
-                task.retry_delay = e.retry_delay if isinstance(e.retry_delay, datetime.timedelta) else datetime.timedelta(seconds = e.retry_delay)
+            if 'retry_delay' in retry:
+                task.retry_delay = delay_timedelta(retry.retry_delay)
 
-            if 'retry_backoff' in e:
-                task.retry_backoff = e.retry_backoff
+            if 'retry_backoff' in retry:
+                task.retry_backoff = retry.retry_backoff
 
-            if 'retry_backoff_factor' in e:
-                task.retry_backoff_factor = e.retry_backoff_factor
+            if 'retry_backoff_factor' in retry:
+                task.retry_backoff_factor = retry.retry_backoff_factor
 
-            if 'args' in e or 'kwargs' in e:
+            if 'args' in retry or 'kwargs' in retry:
                 raise NotImplementedError()
 
             if task.retries >= task.max_retries:
-
-                logger.info('Task (%s) : Failed', task)
-
-                task.status = TaskModel.STATUS_FAILED
-
+                logger.info('%s : Failed (max retries exceeded)', task)
+                task.status = Task.STATUS_FAILED
             else:
                 delay = task.retry_delay
                 if task.retry_backoff:
-                    delay = datetime.timedelta(seconds = delay.total_seconds() * (task.retry_backoff_factor ** (task.retries-1)))
+                    delay_seconds = (
+                        delay.total_seconds()
+                        * (task.retry_backoff_factor ** (task.retries - 1))
+                    )
+                    delay = datetime.timedelta(seconds=delay_seconds)
                 task.due_at = timezone.now() + delay
 
-                task.status = TaskModel.STATUS_QUEUED
-
+                task.status = Task.STATUS_QUEUED
+        finally:
             task.save()
+
+    def load_task(self, task):
+        function = import_function(task.function_name)
+
+        if not isinstance(function, Taskify):
+            msg = f'Function "{task.function_name}" is not a task'
+            raise TaskLoadingError(msg)
+
+        args = task.decode_function_args()
+
+        return (function, args)
+
+    def execute_task(self, function, args):
+        """Execute the code of the task"""
+        with transaction.atomic():
+            function.__protected_call__(args)

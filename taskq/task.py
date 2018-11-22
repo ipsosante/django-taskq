@@ -28,7 +28,7 @@ class Taskify(object):
         self._function = function
         self._name = name
 
-    def __protected_call__(self, task, kwargs):
+    def __protected_call__(self, kwargs):
 
         try:
 
