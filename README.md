@@ -29,9 +29,17 @@ Setup the development environment with
     . ./virtualenv/bin/activate
 	pip install -r requirements_dev.txt
 
+Set your PYTHONPATH to the developement directory:
+
+    export PYTHONPATH=$PYTHONPATH:$PWD
+
 Run the test suite with
 
     python runtests.py
+
+If you want to run `django-admin` commands, you'll need to set `DJANGO_SETTINGS_MODULE` to a valid settings module, e.g.:
+
+    export DJANGO_SETTINGS_MODULE=tests.settings
 
 ## License
 
