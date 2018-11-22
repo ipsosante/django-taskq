@@ -1,8 +1,11 @@
 import datetime
+import json
 import uuid
 
 from django.db import models
 from django.core.exceptions import ValidationError
+
+from .json import JSONDecoder, JSONEncoder
 
 
 def generate_task_uuid():
@@ -41,6 +44,12 @@ class Task(models.Model):
         if self.function_name == "":
             raise ValidationError('Task.function_name cannot be empty')
         return super().save(*args, **kwargs)
+
+    def encode_function_args(self, function_args):
+        self.function_args = json.dumps(function_args, cls=JSONEncoder)
+
+    def decode_function_args(self):
+        return json.loads(self.function_args, cls=JSONDecoder)
 
     def __str__(self):
         return '<Task: {name} : {uuid}>'.format(name=self.name, uuid=self.uuid)
