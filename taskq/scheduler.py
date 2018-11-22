@@ -30,11 +30,9 @@ class ScheduledTask(object):
         return (self.due_at - now).total_seconds() < 0
 
 
-class Scheduler(object):
-
-    tasks = {}
-
+class Scheduler():
     def __init__(self, config):
+        self.tasks = {}
 
         for task_name, task_config in config.items():
             self.tasks[task_name] = ScheduledTask(**task_config)
