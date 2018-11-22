@@ -29,6 +29,10 @@ Setup the development environment with
     . ./virtualenv/bin/activate
 	pip install -r requirements_dev.txt
 
+Run the test suite with
+
+    python runtests.py
+
 ## License
 
 django-taskq is released under the MIT license. See LICENSE for details.
