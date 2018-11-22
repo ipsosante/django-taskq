@@ -1,6 +1,7 @@
 # django-taskq
 
 [![MIT](https://img.shields.io/github/license/ipsosante/django-taskq.svg)](https://tldrlegal.com/license/mit-license)
+[![Build Status](https://img.shields.io/travis/ipsosante/django-taskq/master.svg)](https://travis-ci.org/ipsosante/django-taskq)
 
 django-taskq is an asynchronous task queue/job queue for Django. It's a lightweight alternative to [Celery](http://www.celeryproject.org/).
 
