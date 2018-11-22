@@ -1,6 +1,5 @@
 import datetime
 import json
-import uuid
 import threading
 import importlib
 import logging
@@ -73,7 +72,6 @@ class Consumer(threading.Thread):
                     continue
 
                 task = TaskModel()
-                task.uuid = uuid.uuid4()
                 task.name = scheduled_task_name
                 task.due_at = due_at
                 task.status = TaskModel.STATUS_QUEUED

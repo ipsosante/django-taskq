@@ -3,7 +3,6 @@ import inspect
 import json
 import logging
 import sys
-import uuid
 
 from django.utils import timezone
 
@@ -78,7 +77,6 @@ class Taskify(object):
             due_at = timezone.now()
 
         task = TaskModel()
-        task.uuid = uuid.uuid4()
         task.due_at = due_at
         task.name = task_name
         task.status = TaskModel.STATUS_QUEUED
