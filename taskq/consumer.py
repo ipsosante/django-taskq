@@ -110,11 +110,11 @@ class Consumer(threading.Thread):
 
         try:
             function = import_function(task.function_name)
-        except ImportError as e:
+        except (ImportError, SyntaxError) as e:
             logger.error(str(e))
             task.status = TaskModel.STATUS_FAILED
             task.save()
-            raise TaskFatalError('Unable to find task function "%s"' % task.function_name)
+            raise TaskFatalError('Unable to import task function "%s"' % task.function_name)
 
         if not isinstance(function, Taskify):
             task.status = TaskModel.STATUS_FAILED
