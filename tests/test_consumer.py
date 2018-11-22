@@ -6,6 +6,7 @@ from django.utils.timezone import now
 from taskq.consumer import Consumer
 from taskq.models import Task
 
+
 class ConsumerTestCase(TestCase):
 
     def test_consumer_can_stop(self):

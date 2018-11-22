@@ -5,6 +5,7 @@ from django.core.exceptions import ValidationError
 
 from taskq.models import Task
 
+
 class TaskTestCase(TestCase):
 
     def test_cannot_create_task_without_function_name(self):

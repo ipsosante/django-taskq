@@ -8,7 +8,8 @@ from .utils import delay_timedelta
 
 class ScheduledTask(object):
 
-    def __init__(self, task, cron, args=None, max_retries=3, retry_delay=0, retry_backoff=False, retry_backoff_factor=2):
+    def __init__(self, task, cron, args=None, max_retries=3, retry_delay=0,
+                 retry_backoff=False, retry_backoff_factor=2):
 
         self.task = task
         self.args = args if args else {}

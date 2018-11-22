@@ -60,7 +60,9 @@ class Taskify(object):
 
         self._function(**kwargs)
 
-    def apply_async(self, due_at=None, max_retries=3, retry_delay=0, retry_backoff=False, retry_backoff_factor=2, args=[], kwargs={}):
+    def apply_async(self, due_at=None, max_retries=3, retry_delay=0,
+                    retry_backoff=False, retry_backoff_factor=2, args=[],
+                    kwargs={}):
 
         task_args = inspect.getargspec(self._function).args
 

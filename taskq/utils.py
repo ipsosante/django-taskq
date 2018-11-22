@@ -3,6 +3,7 @@ import importlib
 
 from .exceptions import TaskLoadingError
 
+
 # https://stackoverflow.com/questions/3606202
 def import_function(import_path):
     module_name, unit_name = import_path.rsplit('.', 1)
