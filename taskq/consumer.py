@@ -29,13 +29,13 @@ class Consumer(threading.Thread):
     def __init__(self):
         threading.Thread.__init__(self)
         self.setDaemon(True)
-        self.stop = threading.Event()
+        self._should_stop = threading.Event()
 
     def stop(self):
-        self.stop.set()
+        self._should_stop.set()
 
     def stopped(self):
-        return self.stop.is_set()
+        return self._should_stop.is_set()
 
     def run(self):
 
