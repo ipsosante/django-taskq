@@ -86,16 +86,7 @@ class Consumer(threading.Thread):
             if task_exists:
                 continue
 
-            task = Task()
-            task.name = scheduled_task_name
-            task.due_at = due_at
-            task.status = Task.STATUS_QUEUED
-            task.function_name = scheduled_task.task
-            task.encode_function_args(scheduled_task.args)
-            task.max_retries = scheduled_task.max_retries
-            task.retry_delay = scheduled_task.retry_delay
-            task.retry_backoff = scheduled_task.retry_backoff
-            task.retry_backoff_factor = scheduled_task.retry_backoff_factor
+            task = task_from_scheduled_task(scheduled_task)
             task.save()
 
     def execute_tasks(self):
