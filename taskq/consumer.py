@@ -5,7 +5,6 @@ import time
 
 from time import sleep
 
-from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 
@@ -13,7 +12,7 @@ from .scheduler import Scheduler
 from .models import Task
 from .exceptions import Retry, Cancel, TaskLoadingError
 from .task import Taskify
-from .utils import import_function, delay_timedelta
+from .utils import import_function, delay_timedelta, task_from_scheduled_task
 
 logger = logging.getLogger('taskq')
 
@@ -33,6 +32,7 @@ class Consumer(threading.Thread):
 
         self._sleep_rate = sleep_rate
         self._should_stop = threading.Event()
+        self._scheduler = Scheduler()
 
     def stop(self):
         self._should_stop.set()
@@ -44,43 +44,27 @@ class Consumer(threading.Thread):
     def run(self):
         """The main entry point to start the consumer."""
         self.reset_running_tasks()
-
-        scheduler = self.get_scheduler()
-        self.run_loop(scheduler)
+        self.run_loop()
 
     def reset_running_tasks(self):
         tasks = Task.objects.filter(status=Task.STATUS_RUNNING)
         tasks.update(status=Task.STATUS_QUEUED)
 
-    def get_scheduler(self):
-        if not hasattr(settings, 'TASKQ'):
-            schedule = {}
-        else:
-            schedule = settings.TASKQ.get('schedule', {})
-
-        return Scheduler(schedule)
-
-    def run_loop(self, scheduler):
+    def run_loop(self):
         while not self.stopped:
-            self.create_scheduled_tasks(scheduler)
+            self.create_scheduled_tasks()
             self.execute_tasks()
 
             sleep(self._sleep_rate)
 
-    def create_scheduled_tasks(self, scheduler):
+    def create_scheduled_tasks(self):
         """Register new tasks for each scheduled (recurring) tasks defined in
         the project settings.
         """
-        for scheduled_task_name, scheduled_task in scheduler.tasks.items():
-            if not scheduled_task.is_due:
-                continue
-
-            due_at = scheduled_task.due_at
-            scheduled_task.update_due_at()
-
+        for scheduled_task in self._scheduler.due_tasks:
             task_exists = Task.objects.filter(
-                name=scheduled_task_name,
-                due_at=due_at
+                function_name=scheduled_task.function_name,
+                due_at=scheduled_task.due_at
             ).exists()
 
             if task_exists:
@@ -88,6 +72,8 @@ class Consumer(threading.Thread):
 
             task = task_from_scheduled_task(scheduled_task)
             task.save()
+
+        self._scheduler.update_all_tasks_due_dates()
 
     def execute_tasks(self):
         due_tasks = Task.objects.filter(

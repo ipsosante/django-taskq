@@ -40,10 +40,23 @@ class ScheduledTask:
         return self.due_at <= now
 
 
+class Scheduler:
+    def __init__(self):
+        taskq_config = getattr(settings, 'TASKQ', {})
+        schedule = taskq_config.get('schedule', {})
 
-class Scheduler():
-    def __init__(self, config):
-        self.tasks = {}
+        self._tasks = []
 
-        for task_name, task_config in config.items():
-            self.tasks[task_name] = ScheduledTask(**task_config)
+        for task_name, task_config in schedule.items():
+            new_task = ScheduledTask(name=task_name, **task_config)
+            self._tasks.append(new_task)
+
+    @property
+    def due_tasks(self):
+        """Returns all the task which are due (task.is_due == True)"""
+        return [t for t in self._tasks if t.is_due]
+
+    def update_all_tasks_due_dates(self):
+        """Update the due_at property of all tasks"""
+        for task in self.due_tasks:
+            task.update_due_at()
