@@ -1,17 +1,18 @@
 import datetime
 
+from django.conf import settings
 from django.utils import timezone
 from croniter import croniter
 
 from .utils import delay_timedelta
 
 
-class ScheduledTask(object):
+class ScheduledTask:
 
-    def __init__(self, task, cron, args=None, max_retries=3, retry_delay=0,
-                 retry_backoff=False, retry_backoff_factor=2):
-
-        self.task = task
+    def __init__(self, name, task, cron, args=None, max_retries=3,
+                 retry_delay=0, retry_backoff=False, retry_backoff_factor=2):
+        self.name = name
+        self.task = task  # The function to be executed
         self.args = args if args else {}
         self.cron = cron
         self.max_retries = max_retries
@@ -22,15 +23,22 @@ class ScheduledTask(object):
         self.update_due_at()
 
     def update_due_at(self):
-
+        """Update self.due_at to the next datetime at which this task must be
+        ran"""
         now = timezone.now()
         cron = croniter(self.cron, now)
         self.due_at = cron.get_next(datetime.datetime)
 
-    def is_due(self):
+    @property
+    def function_name(self):
+        """Convenience alias for self.task"""
+        return self.task
 
+    @property
+    def is_due(self):
         now = timezone.now()
-        return (self.due_at - now).total_seconds() < 0
+        return self.due_at <= now
+
 
 
 class Scheduler():

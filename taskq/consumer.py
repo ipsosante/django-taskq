@@ -72,7 +72,7 @@ class Consumer(threading.Thread):
         the project settings.
         """
         for scheduled_task_name, scheduled_task in scheduler.tasks.items():
-            if not scheduled_task.is_due():
+            if not scheduled_task.is_due:
                 continue
 
             due_at = scheduled_task.due_at
