@@ -1,6 +1,7 @@
 from datetime import timedelta
 
-from django.test import TestCase, override_settings
+
+from django.test import TestCase, TransactionTestCase, override_settings
 from django.utils.timezone import now
 
 from taskq.consumer import Consumer
@@ -10,7 +11,7 @@ from taskq.exceptions import TaskLoadingError
 from .utils import create_task
 
 
-class ConsumerTestCase(TestCase):
+class ConsumerTestCase(TransactionTestCase):
 
     def test_consumer_can_stop(self):
         """Consumer can be stopped."""
@@ -20,18 +21,6 @@ class ConsumerTestCase(TestCase):
         consumer.stop()
         consumer.join(timeout=5)
         self.assertFalse(consumer.is_alive())
-
-    def test_consumer_resets_running_tasks_when_started(self):
-        """Consumer will reset and run tasks in "RUNNING" state when started.
-        """
-        task = create_task(status=Task.STATUS_RUNNING)
-
-        consumer = Consumer(sleep_rate=0.1)
-        consumer.stop()  # Exit the run loop immediately
-        consumer.run()
-
-        task.refresh_from_db()
-        self.assertEqual(task.status, Task.STATUS_QUEUED)
 
     def test_consumer_run_due_task(self):
         """Consumer will run task at or after their due date."""
@@ -74,6 +63,23 @@ class ConsumerTestCase(TestCase):
     #     # anywhere and will crash the deamon.
     #     self.assertEqual(task.status, Task.STATUS_FAILED)
 
+    def test_more_consumers_run_due_task(self):
+        due_at = now() - timedelta(milliseconds=100)
+        task = create_task(function_name='tests.fixtures.do_nothing_sleep', due_at=due_at)
+        consumers = []
+        for x in range(5):
+            consumers.append(Consumer(sleep_rate=0.1))
+        for consumer in consumers:
+            consumer.start()
+        for consumer in consumers:
+            consumer.stop()
+        for consumer in consumers:
+            consumer.join(timeout=5)
+        task.refresh_from_db()
+        self.assertEqual(task.status, Task.STATUS_SUCCESS)
+        # This test should output one "do_nothing_sleep"
+        # FIXME : make sure the task run only once. (global counter ?)
+
     @override_settings(TASKQ={
         'schedule': {
             'my-scheduled-task': {
@@ -94,6 +100,32 @@ class ConsumerTestCase(TestCase):
         scheduled_task.due_at -= timedelta(days=1)
 
         consumer.create_scheduled_tasks()
+
+        queued_tasks = Task.objects.filter(status=Task.STATUS_QUEUED).count()
+        self.assertEqual(queued_tasks, 1)
+
+    @override_settings(TASKQ={
+        'schedule': {
+            'my-scheduled-task': {
+                'task': 'tests.fixtures.do_nothing',
+                'cron': '0 1 * * *',  # crontab(minute=0, hour=1)
+            }
+        }
+    })
+    def test_more_consumers_create_task_for_due_scheduled_task(self):
+        consumers = []
+        for x in range(5):
+            consumers.append(Consumer(sleep_rate=0.1))
+        for consumer in consumers:
+            # Hack the due_at date to simulate the fact that the task was run once
+            # already
+            assert len(consumer._scheduler._tasks) == 1
+            scheduled_task = consumer._scheduler._tasks[0]
+            scheduled_task.due_at -= timedelta(days=1)
+        # FIXME : run this concurrently + with a locking mechanism to force
+        # multiple threads in LockedTransaction
+        for consumer in consumers:
+            consumer.create_scheduled_tasks()
 
         queued_tasks = Task.objects.filter(status=Task.STATUS_QUEUED).count()
         self.assertEqual(queued_tasks, 1)
