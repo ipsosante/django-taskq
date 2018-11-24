@@ -6,9 +6,11 @@ import time
 
 from time import sleep
 
-from django.db import transaction
+from django.db import connections, transaction
+from django.db.models import Q
 from django.utils import timezone
 
+from .database import LockedTransaction
 from .exceptions import Retry, Cancel, TaskLoadingError
 from .models import Task
 from .scheduler import Scheduler
@@ -44,43 +46,44 @@ class Consumer(threading.Thread):
 
     def run(self):
         """The main entry point to start the consumer."""
-        self.reset_running_tasks()
-        self.run_loop()
+        while not self.stopped:
+            self.create_scheduled_tasks()
+            self.execute_tasks()
+            sleep(self._sleep_rate)
+        # Close connections on this thread. They aren't automatically closed by
+        # Django. See https://code.djangoproject.com/ticket/22420
+        for connection in connections.all():
+            connection.close()
 
     def reset_running_tasks(self):
         tasks = Task.objects.filter(status=Task.STATUS_RUNNING)
         tasks.update(status=Task.STATUS_QUEUED)
 
-    def run_loop(self):
-        while not self.stopped:
-            self.create_scheduled_tasks()
-            self.execute_tasks()
-
-            sleep(self._sleep_rate)
-
     def create_scheduled_tasks(self):
         """Register new tasks for each scheduled (recurring) tasks defined in
         the project settings.
         """
-        for scheduled_task in self._scheduler.due_tasks:
-            task_exists = Task.objects.filter(
-                function_name=scheduled_task.function_name,
-                due_at=scheduled_task.due_at
-            ).exists()
+        with LockedTransaction(Task, "ACCESS SHARE"):
+            for scheduled_task in self._scheduler.due_tasks:
+                task_exists = Task.objects.filter(
+                    function_name=scheduled_task.function_name,
+                    due_at=scheduled_task.due_at
+                ).exists()
 
-            if task_exists:
-                continue
+                if task_exists:
+                    continue
 
-            task = task_from_scheduled_task(scheduled_task)
-            task.save()
+                task = task_from_scheduled_task(scheduled_task)
+                task.save()
 
         self._scheduler.update_all_tasks_due_dates()
 
+    @transaction.atomic
     def execute_tasks(self):
         due_tasks = Task.objects.filter(
-            status=Task.STATUS_QUEUED,
+            Q(status=Task.STATUS_QUEUED) | Q(status=Task.STATUS_RUNNING),
             due_at__lte=timezone.now()
-        )
+        ).select_for_update(skip_locked=True)
 
         for due_task in due_tasks:
             self.process_task(due_task)
