@@ -42,6 +42,36 @@ class ConsumerTestCase(TestCase):
         task.refresh_from_db()
         self.assertEqual(task.status, Task.STATUS_SUCCESS)
 
+    def test_consumer_run_self_cancelling_task(self):
+        """Consumer will run a self-cancelling task only once."""
+        due_at = now() - timedelta(milliseconds=100)
+        task = create_task(
+            function_name='tests.fixtures.self_cancelling',
+            due_at=due_at
+        )
+
+        consumer = Consumer()
+        consumer.execute_tasks()
+
+        task.refresh_from_db()
+        self.assertEqual(task.status, Task.STATUS_CANCELED)
+
+    def test_consumer_wont_load_not_taskified_function(self):
+        """Consumer will refuse to load a regular function not decorated with
+        @taskify.
+        """
+        task = create_task(
+            function_name='tests.fixtures.naked_function',
+        )
+
+        consumer = Consumer()
+        consumer.execute_tasks()
+
+        task.refresh_from_db()
+        # FIXME: Right now taskq is raising an exception which is not catched
+        # anywhere and will crash the deamon.
+        self.assertEqual(task.status, Task.STATUS_FAILED)
+
     @override_settings(TASKQ={
         'schedule': {
             'my-scheduled-task': {
