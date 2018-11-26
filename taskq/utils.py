@@ -1,24 +1,6 @@
 import datetime
-import importlib
 
 from .models import Task
-from .exceptions import TaskLoadingError
-
-
-# https://stackoverflow.com/questions/3606202
-def import_function(import_path):
-    module_name, unit_name = import_path.rsplit('.', 1)
-    try:
-        module = importlib.import_module(module_name)
-    except (ImportError, SyntaxError) as e:
-        raise TaskLoadingError(e)
-
-    try:
-        func = getattr(module, unit_name)
-    except AttributeError as e:
-        raise TaskLoadingError(e)
-
-    return func
 
 
 def delay_timedelta(delay):

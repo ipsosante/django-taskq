@@ -1,6 +1,7 @@
 import datetime
-import threading
+import importlib
 import logging
+import threading
 import time
 
 from time import sleep
@@ -8,11 +9,11 @@ from time import sleep
 from django.db import transaction
 from django.utils import timezone
 
-from .scheduler import Scheduler
-from .models import Task
 from .exceptions import Retry, Cancel, TaskLoadingError
+from .models import Task
+from .scheduler import Scheduler
 from .task import Taskify
-from .utils import import_function, delay_timedelta, task_from_scheduled_task
+from .utils import delay_timedelta, task_from_scheduled_task
 
 logger = logging.getLogger('taskq')
 
@@ -136,17 +137,36 @@ class Consumer(threading.Thread):
             task.save()
 
     def load_task(self, task):
-        function = import_function(task.function_name)
-
-        if not isinstance(function, Taskify):
-            msg = f'Function "{task.function_name}" is not a task'
-            raise TaskLoadingError(msg)
-
+        function = self.import_taskified_function(task.function_name)
         args = task.decode_function_args()
 
         return (function, args)
+
+    def import_taskified_function(self, import_path):
+        """Load a @taskified function from a python module.
+
+        Returns TaskLoadingError if loading of the function failed.
+        """
+        # https://stackoverflow.com/questions/3606202
+        module_name, unit_name = import_path.rsplit('.', 1)
+        try:
+            module = importlib.import_module(module_name)
+        except (ImportError, SyntaxError) as e:
+            raise TaskLoadingError(e)
+
+        try:
+            obj = getattr(module, unit_name)
+        except AttributeError as e:
+            raise TaskLoadingError(e)
+
+        if not isinstance(obj, Taskify):
+            msg = f'Object "{import_path}" is not a task'
+            raise TaskLoadingError(msg)
+
+        return obj
 
     def execute_task(self, function, args):
         """Execute the code of the task"""
         with transaction.atomic():
             function.__protected_call__(args)
+

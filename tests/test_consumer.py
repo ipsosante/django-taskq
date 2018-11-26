@@ -5,6 +5,8 @@ from django.utils.timezone import now
 
 from taskq.consumer import Consumer
 from taskq.models import Task
+from taskq.exceptions import TaskLoadingError
+
 from .utils import create_task
 
 
@@ -95,3 +97,39 @@ class ConsumerTestCase(TestCase):
 
         queued_tasks = Task.objects.filter(status=Task.STATUS_QUEUED).count()
         self.assertEqual(queued_tasks, 1)
+
+
+class ImportTaskifiedFunctionTestCase(TestCase):
+
+    def test_can_import_existing_task(self):
+        """Consumer can import a valid and existing @taskified function."""
+        consumer = Consumer()
+        func = consumer.import_taskified_function('tests.fixtures.do_nothing')
+        self.assertIsNotNone(func)
+
+    def test_fails_import_non_taskified_functions(self):
+        """Consumer raises when trying to import a function not decorated with
+        @taskify.
+        """
+        consumer = Consumer()
+        self.assertRaises(TaskLoadingError, consumer.import_taskified_function, 'tests.fixtures.naked_function')
+
+    def test_fails_import_non_existing_module(self):
+        """Consumer raises when trying to import a function from a non-existing
+        module.
+        """
+        consumer = Consumer()
+        self.assertRaises(TaskLoadingError, consumer.import_taskified_function, 'tests.foobar.nope')
+
+    def test_fails_import_non_existing_function(self):
+        """Consumer raises when trying to import a non-existing function."""
+        consumer = Consumer()
+        self.assertRaises(TaskLoadingError, consumer.import_taskified_function, 'tests.fixtures.not_a_known_function')
+
+    def test_fails_import_function_syntax_error(self):
+        """Consumer raises when trying to import a function with a Python
+        syntax error.
+        """
+        consumer = Consumer()
+        self.assertRaises(TaskLoadingError, consumer.import_taskified_function,
+                          'tests.fixtures_broken.broken_function')
