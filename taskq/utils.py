@@ -14,7 +14,7 @@ def delay_timedelta(delay):
     if isinstance(delay, int):
         return datetime.timedelta(seconds=delay)
 
-    raise ValueError('Unexpected delay type')
+    raise TypeError('Unexpected delay type')
 
 
 def task_from_scheduled_task(scheduled_task):
