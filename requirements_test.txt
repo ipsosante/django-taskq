@@ -3,4 +3,4 @@
 flake8>=3.6.0
 coverage>=4.5.0
 codecov>=2.0.15
-psycopg2 --no-binary psycopg2
+psycopg2>=2.7.4 --no-binary psycopg2

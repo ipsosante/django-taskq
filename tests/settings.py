@@ -12,9 +12,9 @@ DATABASES = {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'taskq',
         'USER': 'postgres',
-        'PASSWORD': '',
+        'PASSWORD': 'IN0vRycvrF',
         'HOST': 'localhost',
-        'PORT': '',
+        'PORT': '5433',
     }
 }
 

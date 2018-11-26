@@ -31,6 +31,17 @@ Setup the development environment with
     . ./virtualenv/bin/activate
 	pip install -r requirements_dev.txt
 
+Setup the PostgreSQL database:
+
+    brew install postgresql@10
+    initdb /path/to/database/storage  # For example /usr/local/var/postgres
+
+    # Start PostgreSQL on port 5433
+    pg_ctl -D /path/to/database/storage -p 5433 start
+
+    # Create a postgres user allowed to create our test database
+    psql -p 5433 -d postgres -c "CREATE USER postgres WITH PASSWORD 'IN0vRycvrF' CREATEDB"
+
 Set your PYTHONPATH to the developement directory:
 
     export PYTHONPATH=$PYTHONPATH:$PWD
@@ -38,6 +49,19 @@ Set your PYTHONPATH to the developement directory:
 Run the test suite with
 
     python runtests.py
+
+
+----------
+
+To collect coverage data run the test suite with
+
+    coverage run runtests.py
+
+and then display the coverage data as HTML
+
+    coverage html --include='taskq/*'; open htmlcov/index.html
+
+----------
 
 If you want to run `django-admin` commands, you'll need to set `DJANGO_SETTINGS_MODULE` to a valid settings module, e.g.:
 
