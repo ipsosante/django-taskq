@@ -9,7 +9,7 @@ from .json import JSONDecoder, JSONEncoder
 
 
 def generate_task_uuid():
-    return uuid.uuid4()
+    return str(uuid.uuid4())
 
 
 class Task(models.Model):
