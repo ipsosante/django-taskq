@@ -2,6 +2,7 @@ import datetime
 import importlib
 import logging
 import threading
+import signal
 
 from time import sleep
 
@@ -32,7 +33,14 @@ class Consumer:
         self._should_stop = threading.Event()
         self._scheduler = Scheduler()
 
+        signal.signal(signal.SIGINT, self.sigint_handler)
+
+    def sigint_handler(self, sig, frame):
+        self.stop()
+
     def stop(self):
+        logger.info('Consumer was asked to quit. '
+                    'Terminating process in %ss.', self._sleep_rate)
         self._should_stop.set()
 
     @property
