@@ -168,5 +168,4 @@ class Consumer(threading.Thread):
     def execute_task(self, function, args):
         """Execute the code of the task"""
         with transaction.atomic():
-            function.__protected_call__(args)
-
+            function._protected_call(args)
