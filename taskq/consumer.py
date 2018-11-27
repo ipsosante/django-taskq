@@ -2,7 +2,6 @@ import datetime
 import importlib
 import logging
 import threading
-import time
 
 from time import sleep
 
@@ -20,8 +19,8 @@ from .utils import delay_timedelta, task_from_scheduled_task
 logger = logging.getLogger('taskq')
 
 
-class Consumer(threading.Thread):
-    """Executes tasks when they are due."""
+class Consumer:
+    """Collect and executes tasks when they are due."""
 
     DEFAULT_SLEEP_RATE = 10  # In seconds
 
@@ -29,10 +28,6 @@ class Consumer(threading.Thread):
     # useful when testing.
     def __init__(self, sleep_rate=DEFAULT_SLEEP_RATE):
         super().__init__()
-        self.daemon = True
-        timestamp = int(time.time())
-        self.name = f"TaskqConsumer-{timestamp}"
-
         self._sleep_rate = sleep_rate
         self._should_stop = threading.Event()
         self._scheduler = Scheduler()
@@ -45,10 +40,11 @@ class Consumer(threading.Thread):
         return self._should_stop.is_set()
 
     def run(self):
-        """The main entry point to start the consumer."""
+        """The main entry point to start the consumer run loop."""
         while not self.stopped:
             self.create_scheduled_tasks()
             self.execute_tasks()
+
             sleep(self._sleep_rate)
         # Close connections on this thread. They aren't automatically closed by
         # Django. See https://code.djangoproject.com/ticket/22420
