@@ -48,18 +48,18 @@ Set your PYTHONPATH to the developement directory:
 
 Run the test suite with
 
-    python runtests.py
+    pytest
 
 
 ----------
 
 To collect coverage data run the test suite with
 
-    coverage run runtests.py
+    pytest --cov=taskq tests/
 
-and then display the coverage data as HTML
+To collect coverage data as HTML and view it in your browser, use
 
-    coverage html --include='taskq/*'; open htmlcov/index.html
+    pytest --cov-report html --cov=taskq tests/; open htmlcov/index.html
 
 ----------
 

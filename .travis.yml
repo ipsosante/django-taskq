@@ -13,6 +13,7 @@ addons:
 
 env:
   global:
+  - PYTHONPATH=$PYTHONPATH:$(pwd)
   - PGPORT=5433
 
 install:
@@ -28,7 +29,7 @@ before_script:
   - sudo -u postgres psql -U postgres -c "alter user postgres with password 'IN0vRycvrF';"
 
 script:
-  - coverage run runtests.py
+  - pytest --cov=taskq tests/
 
 after_success:
   - codecov
