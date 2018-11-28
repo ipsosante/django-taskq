@@ -30,6 +30,14 @@ class Taskify:
 
         self._function(**kwargs)
 
+    @property
+    def func_name(self):
+        return '%s.%s' % (self._function.__module__, self._function.__name__)
+
+    @property
+    def name(self):
+        return self._name if self._name else self.func_name
+
     def apply(self, *args, **kwargs):
 
         task_args = inspect.getargspec(self._function).args
@@ -55,17 +63,14 @@ class Taskify:
         for i, arg in enumerate(args):
             kwargs[task_args[i]] = arg
 
-        func_name = '%s.%s' % (self._function.__module__, self._function.__name__)
-        task_name = self._name if self._name else func_name
-
         if not due_at:
             due_at = timezone.now()
 
         task = TaskModel()
         task.due_at = due_at
-        task.name = task_name
+        task.name = self.name
         task.status = TaskModel.STATUS_QUEUED
-        task.function_name = func_name
+        task.function_name = self.func_name
         task.function_args = json.dumps(kwargs, cls=JSONEncoder)
         task.max_retries = max_retries
         task.retry_delay = delay_timedelta(retry_delay)

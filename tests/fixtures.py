@@ -8,8 +8,15 @@ def naked_function():
     pass
 
 
+# Keep the @taskify decorator **without** parenthesis here
 @taskify
 def do_nothing():
+    pass
+
+
+# Keep the @taskify() decorator **with** parenthesis here
+@taskify()
+def do_nothing_with_parenthesis():
     pass
 
 
