@@ -1,4 +1,4 @@
-from time import sleep
+import threading
 
 from taskq.task import taskify
 from taskq.exceptions import Cancel
@@ -14,11 +14,30 @@ def do_nothing():
 
 
 @taskify()
-def do_nothing_sleep():
-    print("do_nothing_sleep")
-    sleep(0.1)
+def self_cancelling():
+    raise Cancel()
+
+
+###############################################################################
+
+_COUNTER = 0
+_COUNTER_LOCK = threading.Lock()
+
+
+def counter_reset():
+    with _COUNTER_LOCK:
+        global _COUNTER
+        _COUNTER = 0
+
+
+def counter_get_value():
+    with _COUNTER_LOCK:
+        global _COUNTER
+        return _COUNTER
 
 
 @taskify()
-def self_cancelling():
-    raise Cancel()
+def counter_increment():
+    with _COUNTER_LOCK:
+        global _COUNTER
+        _COUNTER += 1

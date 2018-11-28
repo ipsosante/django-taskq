@@ -25,13 +25,22 @@ class Consumer:
 
     DEFAULT_SLEEP_RATE = 10  # In seconds
 
-    # You probably don't want to change default default sleep rate, it's only
-    # useful when testing.
-    def __init__(self, sleep_rate=DEFAULT_SLEEP_RATE):
+    def __init__(self, sleep_rate=DEFAULT_SLEEP_RATE, execute_tasks_barrier=None):
+        """Create a new Consumer.
+
+        :param sleep_rate: The time in seconds the consumer will wait between
+        each run loop iteration (mostly usefull when testing).
+        :param execute_tasks_barrier: Install the passed barrier in the
+        `execute_tasks_barrier` method to test its thread-safety. DO NOT USE
+        IN PRODUCTION.
+        """
         super().__init__()
-        self._sleep_rate = sleep_rate
         self._should_stop = threading.Event()
         self._scheduler = Scheduler()
+
+        # Test parameters
+        self._sleep_rate = sleep_rate
+        self._execute_tasks_barrier = execute_tasks_barrier
 
         signal.signal(signal.SIGINT, self.sigint_handler)
 
@@ -70,7 +79,11 @@ class Consumer:
         """Register new tasks for each scheduled (recurring) tasks defined in
         the project settings.
         """
-        with LockedTransaction(Task, "ACCESS SHARE"):
+        # Multiple instances of taskq rely on the SHARE ROW EXCLUSIV lock.
+        # This mode protects a table against concurrent data changes, and is
+        # self-exclusive so that only one session can hold it at a time.
+        # See https://www.postgresql.org/docs/10/explicit-locking.html
+        with LockedTransaction(Task, "SHARE ROW EXCLUSIVE"):
             for scheduled_task in self._scheduler.due_tasks:
                 task_exists = Task.objects.filter(
                     function_name=scheduled_task.function_name,
@@ -87,11 +100,27 @@ class Consumer:
 
     @transaction.atomic
     def execute_tasks(self):
+        due_tasks = self.fetch_due_tasks()
+
+        # Only used when testing. Ask the consumers to wait for each others at
+        # the barrier.
+        if self._execute_tasks_barrier is not None:
+            self._execute_tasks_barrier.wait()
+
+        self.process_tasks(due_tasks)
+
+    def fetch_due_tasks(self):
+        # Multiple instances of taskq rely on select_for_update().
+        # This mechanism will lock selected rows until the end of the transaction.
+        # We also fetch STATUS_RUNNING in case of previous inconsistent state.
         due_tasks = Task.objects.filter(
             Q(status=Task.STATUS_QUEUED) | Q(status=Task.STATUS_RUNNING),
             due_at__lte=timezone.now()
         ).select_for_update(skip_locked=True)
 
+        return due_tasks
+
+    def process_tasks(self, due_tasks):
         for due_task in due_tasks:
             self.process_task(due_task)
 

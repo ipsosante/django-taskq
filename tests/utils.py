@@ -1,5 +1,8 @@
+import threading
+
 from django.utils.timezone import now
 
+from taskq.consumer import Consumer
 from taskq.models import Task
 
 
@@ -28,3 +31,22 @@ def create_task(**kwargs):
     task.save()
 
     return task
+
+
+def create_background_consumers(count, auto_start=True, *args, **kwargs):
+    """Create new Consumer instances on background threads, and return a tuple
+    ([consumer], [thread]).
+    """
+    consumers = []
+    threads = []
+    for _ in range(count):
+        consumer = Consumer(*args, **kwargs)
+        consumers.append(consumer)
+        thread = threading.Thread(target=consumer.run)
+        threads.append(thread)
+
+    if auto_start:
+        for thread in threads:
+            thread.start()
+
+    return (consumers, threads)
