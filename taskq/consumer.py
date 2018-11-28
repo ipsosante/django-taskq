@@ -42,7 +42,7 @@ class Consumer:
 
     def stop(self):
         logger.info('Consumer was asked to quit. '
-                    'Terminating process in %ss.', self._sleep_rate)
+                    'Terminating process in less than %ss.', self._sleep_rate)
         self._should_stop.set()
 
     @property
@@ -51,6 +51,8 @@ class Consumer:
 
     def run(self):
         """The main entry point to start the consumer run loop."""
+        logger.info('Consumer started.')
+
         while not self.stopped:
             self.create_scheduled_tasks()
             self.execute_tasks()
