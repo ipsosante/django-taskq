@@ -1,7 +1,10 @@
+import datetime
+
 from django.test import TransactionTestCase
 from django.utils.timezone import now
 from django.db.utils import IntegrityError
 from django.core.exceptions import ValidationError
+from django.utils import timezone
 
 from taskq.models import Task
 
@@ -37,6 +40,109 @@ class TaskTestCase(TransactionTestCase):
         task.function_name = "tests.fixtures.do_nothing"
         task.save()
         self.assertTrue(task.uuid in str(task))
+
+    def test_tasks_update_due_at_simple(self):
+        """The task updates its due_at after an execution failure."""
+        base_due_at = datetime.datetime(2018, 11, 28, hour=20, tzinfo=timezone.utc)
+
+        task = Task()
+        task.due_at = base_due_at
+        task.retry_delay = datetime.timedelta(seconds=10)
+        task.function_name = "tests.fixtures.do_nothing"
+        task.save()
+        self.assertEqual(task.due_at, base_due_at)
+
+        previous_due_at = task.due_at
+        for i in range(1, 4):
+            task.retries = i
+            before = timezone.now()
+            task.update_due_at_after_failure()
+            after = timezone.now()
+            delta = datetime.timedelta(seconds=10)
+            self.assertGreaterEqual(task.due_at, before + delta)
+            self.assertLessEqual(task.due_at, after + delta)
+
+            self.assertGreater(task.due_at, previous_due_at)
+            previous_due_at = task.due_at
+
+    def test_tasks_update_due_at_with_backoff(self):
+        """The task updates its due_at with a quadratic growing delay if
+        retry_backoff is true.
+        """
+        base_due_at = datetime.datetime(2018, 11, 28, hour=20, tzinfo=timezone.utc)
+
+        task = Task()
+        task.due_at = base_due_at
+        task.retry_delay = datetime.timedelta(seconds=10)
+        task.retry_backoff = True
+        task.function_name = "tests.fixtures.do_nothing"
+        task.save()
+        self.assertEqual(task.due_at, base_due_at)
+
+        previous_due_at = task.due_at
+        for i in range(1, 4):
+            task.retries = i
+            before = timezone.now()
+            task.update_due_at_after_failure()
+            after = timezone.now()
+            delta = datetime.timedelta(seconds=10 * (2 ** (i - 1)))
+            self.assertGreaterEqual(task.due_at, before + delta)
+            self.assertLessEqual(task.due_at, after + delta)
+
+            self.assertGreater(task.due_at, previous_due_at)
+            previous_due_at = task.due_at
+
+    def test_tasks_update_due_at_with_custom_backoff_factor(self):
+        """The task updates its due_at with a delay growing according to
+        retry_backoff_factor set.
+        """
+        base_due_at = datetime.datetime(2018, 11, 28, hour=20, tzinfo=timezone.utc)
+
+        task = Task()
+        task.due_at = base_due_at
+        task.retry_delay = datetime.timedelta(seconds=10)
+        task.retry_backoff = True
+        task.retry_backoff_factor = 4
+        task.function_name = "tests.fixtures.do_nothing"
+        task.save()
+        self.assertEqual(task.due_at, base_due_at)
+
+        previous_due_at = task.due_at
+        for i in range(1, 4):
+            task.retries = i
+            before = timezone.now()
+            task.update_due_at_after_failure()
+            after = timezone.now()
+            delta = datetime.timedelta(seconds=10 * (4 ** (i - 1)))
+            self.assertGreaterEqual(task.due_at, before + delta)
+            self.assertLessEqual(task.due_at, after + delta)
+
+            self.assertGreater(task.due_at, previous_due_at)
+            previous_due_at = task.due_at
+
+    def test_tasks_update_due_at_ignores_backoff_factor_if_backoff_false(self):
+        """The task updates its due_at without taking into account its
+        retry_backoff_factor if retry_backoff is False.
+        """
+        base_due_at = datetime.datetime(2018, 11, 28, hour=20, tzinfo=timezone.utc)
+
+        task = Task()
+        task.due_at = base_due_at
+        task.retry_delay = datetime.timedelta(seconds=10)
+        task.retry_backoff = False
+        task.retry_backoff_factor = 4
+        task.function_name = "tests.fixtures.do_nothing"
+        task.save()
+        self.assertEqual(task.due_at, base_due_at)
+
+        for i in range(1, 4):
+            task.retries = i
+            before = timezone.now()
+            task.update_due_at_after_failure()
+            after = timezone.now()
+            delta = datetime.timedelta(seconds=10)
+            self.assertGreaterEqual(task.due_at, before + delta)
+            self.assertLessEqual(task.due_at, after + delta)
 
     def test_tasks_arguments_encoding_args(self):
         """The function positional args are properly encoded when using encode_function_args()."""
