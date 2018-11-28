@@ -49,11 +49,18 @@ class Task(models.Model):
         super().save(force_insert=force_insert, force_update=force_update,
                      using=None, update_fields=None)
 
-    def encode_function_args(self, function_args):
-        self.function_args = json.dumps(function_args, cls=JSONEncoder)
+    def encode_function_args(self, args=None, kwargs=None):
+        if not kwargs:
+            kwargs = {}
+        if args:
+            kwargs['__positional_args__'] = args
+        self.function_args = json.dumps(kwargs, cls=JSONEncoder)
 
     def decode_function_args(self):
-        return json.loads(self.function_args, cls=JSONDecoder)
+        kwargs = json.loads(self.function_args, cls=JSONDecoder)
+        args = kwargs.pop('__positional_args__', [])
+
+        return (args, kwargs)
 
     def update_due_at_after_failure(self):
         """Update its due_at date taking into account the number of retries and

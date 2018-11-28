@@ -1,9 +1,7 @@
-import json
 import logging
 
 from django.utils import timezone
 
-from .json import JSONEncoder
 from .models import Task as TaskModel
 from .utils import delay_timedelta
 
@@ -16,8 +14,8 @@ class Taskify:
         self._name = name
 
     # If you rename this method, update the code in utils.format_exception_traceback
-    def _protected_call(self, kwargs):
-        self._function(**kwargs)
+    def _protected_call(self, args, kwargs):
+        self._function(*args, **kwargs)
 
     def apply(self, *args, **kwargs):
         return self._function(*args, **kwargs)
@@ -34,7 +32,7 @@ class Taskify:
         task.name = self.name
         task.status = TaskModel.STATUS_QUEUED
         task.function_name = self.func_name
-        task.function_args = json.dumps(kwargs, cls=JSONEncoder)
+        task.encode_function_args(args, kwargs)
         task.max_retries = max_retries
         task.retry_delay = delay_timedelta(retry_delay)
         task.retry_backoff = retry_backoff

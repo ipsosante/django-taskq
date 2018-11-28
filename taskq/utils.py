@@ -28,7 +28,7 @@ def task_from_scheduled_task(scheduled_task):
     task.name = scheduled_task.name
     task.due_at = scheduled_task.due_at
     task.function_name = scheduled_task.function_name
-    task.encode_function_args(scheduled_task.args)
+    task.encode_function_args(kwargs=scheduled_task.args)
     task.max_retries = scheduled_task.max_retries
     task.retry_delay = scheduled_task.retry_delay
     task.retry_backoff = scheduled_task.retry_backoff

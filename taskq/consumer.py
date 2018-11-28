@@ -114,8 +114,8 @@ class Consumer:
         task.save()
 
         try:
-            function, args = self.load_task(task)
-            self.execute_task(function, args)
+            function, args, kwargs = self.load_task(task)
+            self.execute_task(function, args, kwargs)
         except TaskFatalError as e:
             logger.error('%s : Fatal error', task)
             self.fail_task(task, e)
@@ -147,9 +147,9 @@ class Consumer:
 
     def load_task(self, task):
         function = self.import_taskified_function(task.function_name)
-        args = task.decode_function_args()
+        args, kwargs = task.decode_function_args()
 
-        return (function, args)
+        return (function, args, kwargs)
 
     def import_taskified_function(self, import_path):
         """Load a @taskified function from a python module.
@@ -174,7 +174,7 @@ class Consumer:
 
         return obj
 
-    def execute_task(self, function, args):
+    def execute_task(self, function, args, kwargs):
         """Execute the code of the task"""
         with transaction.atomic():
-            function._protected_call(args)
+            function._protected_call(args, kwargs)

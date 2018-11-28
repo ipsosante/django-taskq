@@ -38,14 +38,23 @@ class TaskTestCase(TransactionTestCase):
         task.save()
         self.assertTrue(task.uuid in str(task))
 
-    def test_tasks_arguments_encoding(self):
-        """The function arguments are properly encoded when using
-        encode_function_args().
-        """
+    def test_tasks_arguments_encoding_args(self):
+        """The function positional args are properly encoded when using encode_function_args()."""
         task = Task()
         task.due_at = now()
         task.function_name = "tests.fixtures.do_nothing"
-        task.encode_function_args({
+        task.encode_function_args(['a', 1, 'foo', True])
+        task.save()
+
+        expected = '{"__positional_args__": ["a", 1, "foo", true]}'
+        self.assertEqual(task.function_args, expected)
+
+    def test_tasks_arguments_encoding_kwargs(self):
+        """The function kwargs are properly encoded when using encode_function_args()."""
+        task = Task()
+        task.due_at = now()
+        task.function_name = "tests.fixtures.do_nothing"
+        task.encode_function_args(kwargs={
             'cheese': 'blue',
             'fruits_count': 8
         })
@@ -54,18 +63,58 @@ class TaskTestCase(TransactionTestCase):
         expected = '{"cheese": "blue", "fruits_count": 8}'
         self.assertEqual(task.function_args, expected)
 
-    def test_tasks_arguments_decoding(self):
-        """The function arguments are properly decoded when using
-        decode_function_args().
-        """
+    def test_tasks_arguments_encoding_mixed_args(self):
+        """The function parameters are properly encoded when using encode_function_args()."""
+        task = Task()
+        task.due_at = now()
+        task.function_name = "tests.fixtures.do_nothing"
+        task.encode_function_args(
+            ['a', 'b', 42],
+            {
+                'cheese': 'blue',
+                'fruits_count': 2
+            }
+        )
+        task.save()
+
+        expected = '{"cheese": "blue", "fruits_count": 2, "__positional_args__": ["a", "b", 42]}'
+        self.assertEqual(task.function_args, expected)
+
+    def test_tasks_arguments_decoding_args(self):
+        """The function positional args are properly decoded when using decode_function_args()."""
+        task = Task()
+        task.due_at = now()
+        task.function_name = "tests.fixtures.do_nothing"
+        task.function_args = '{"__positional_args__": [4, true, "banana"]}'
+        task.save()
+
+        expected = ([4, True, "banana"], {})
+        self.assertEqual(task.decode_function_args(), expected)
+
+    def test_tasks_arguments_decoding_kwargs(self):
+        """The function kwargs are properly decoded when using decode_function_args()."""
         task = Task()
         task.due_at = now()
         task.function_name = "tests.fixtures.do_nothing"
         task.function_args = '{"cheese": "blue", "fruits_count": 8}'
         task.save()
 
-        expected = {
+        expected = ([], {
             "cheese": "blue",
             "fruits_count": 8
-        }
+        })
+        self.assertEqual(task.decode_function_args(), expected)
+
+    def test_tasks_arguments_decoding_mixed_args(self):
+        """The function parameters are properly decoded when using decode_function_args()."""
+        task = Task()
+        task.due_at = now()
+        task.function_name = "tests.fixtures.do_nothing"
+        task.function_args = '{"cheese": "blue", "fruits_count": 8, "__positional_args__": [7, "orange"]}'
+        task.save()
+
+        expected = ([7, "orange"], {
+            "cheese": "blue",
+            "fruits_count": 8
+        })
         self.assertEqual(task.decode_function_args(), expected)
