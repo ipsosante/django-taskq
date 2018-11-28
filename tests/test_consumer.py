@@ -77,6 +77,46 @@ class ConsumerTestCase(TransactionTestCase):
         task.refresh_from_db()
         self.assertEqual(task.status, Task.STATUS_FAILED)
 
+    def test_consumer_will_retry_after_task_error(self):
+        """Consumer will catch the tasks error and retry to run the task
+        later.
+        """
+        task = create_task(
+            function_name='tests.fixtures.failing',
+            max_retries=3
+        )
+
+        consumer = Consumer()
+        consumer.execute_tasks()
+
+        task.refresh_from_db()
+        self.assertEqual(task.status, Task.STATUS_QUEUED)
+        self.assertEqual(task.retries, 1)
+
+    def test_consumer_will_retry_at_most_max_retries_times(self):
+        """Consumer will not retry the task more than task.max_retries times."""
+        task = create_task(
+            function_name='tests.fixtures.failing',
+            max_retries=2
+        )
+
+        consumer = Consumer()
+
+        consumer.execute_tasks()
+        task.refresh_from_db()
+        self.assertEqual(task.status, Task.STATUS_QUEUED)
+        self.assertEqual(task.retries, 1)
+
+        consumer.execute_tasks()
+        task.refresh_from_db()
+        self.assertEqual(task.status, Task.STATUS_QUEUED)
+        self.assertEqual(task.retries, 2)
+
+        consumer.execute_tasks()
+        task.refresh_from_db()
+        self.assertEqual(task.status, Task.STATUS_FAILED)
+        self.assertEqual(task.retries, 2)
+
     def test_consumer_logs_cleaned_backtrace(self):
         """Consumer will log catched exceptions with internal frames removed
         from the backtrace."""
