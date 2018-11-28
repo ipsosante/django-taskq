@@ -1,4 +1,3 @@
-import datetime
 import importlib
 import logging
 import threading
@@ -10,11 +9,11 @@ from django.db.models import Q
 from django.utils import timezone
 
 from .database import LockedTransaction
-from .exceptions import Retry, Cancel, TaskLoadingError
+from .exceptions import Cancel, TaskLoadingError, TaskFatalError
 from .models import Task
 from .scheduler import Scheduler
 from .task import Taskify
-from .utils import delay_timedelta, task_from_scheduled_task
+from .utils import task_from_scheduled_task, format_exception_traceback
 
 logger = logging.getLogger('taskq')
 
@@ -117,46 +116,34 @@ class Consumer:
         try:
             function, args = self.load_task(task)
             self.execute_task(function, args)
-            task.status = Task.STATUS_SUCCESS
+        except TaskFatalError as e:
+            logger.info('%s : Fatal error', task)
+            self.fail_task(task, e)
         except Cancel:
             logger.info('%s : Canceled', task)
             task.status = Task.STATUS_CANCELED
-        except Retry as retry:
-            logger.info('%s : Failed (will retry)', task)
-
-            task.retries += 1
-
-            if 'max_retries' in retry:
-                task.max_retries = retry.max_retries
-
-            if 'retry_delay' in retry:
-                task.retry_delay = delay_timedelta(retry.retry_delay)
-
-            if 'retry_backoff' in retry:
-                task.retry_backoff = retry.retry_backoff
-
-            if 'retry_backoff_factor' in retry:
-                task.retry_backoff_factor = retry.retry_backoff_factor
-
-            if 'args' in retry or 'kwargs' in retry:
-                raise NotImplementedError()
-
-            if task.retries >= task.max_retries:
-                logger.info('%s : Failed (max retries exceeded)', task)
-                task.status = Task.STATUS_FAILED
+        except Exception as e:
+            if task.retries < task.max_retries - 1:
+                logger.info('%s : Failed, will retry', task)
+                self.retry_task(task)
             else:
-                delay = task.retry_delay
-                if task.retry_backoff:
-                    delay_seconds = (
-                        delay.total_seconds()
-                        * (task.retry_backoff_factor ** (task.retries - 1))
-                    )
-                    delay = datetime.timedelta(seconds=delay_seconds)
-                task.due_at = timezone.now() + delay
-
-                task.status = Task.STATUS_QUEUED
+                logger.info('%s : Failed, exceeded max retries', task)
+                self.fail_task(task, e)
+        else:
+            task.status = Task.STATUS_SUCCESS
         finally:
             task.save()
+
+    def retry_task(self, task):
+        task.retries += 1
+        task.update_due_at_after_failure()
+        task.status = Task.STATUS_QUEUED
+
+    def fail_task(self, task, error):
+        traceback = format_exception_traceback(error)
+        type_name = error.__class__.__name__
+        logger.exception('%s : %s %s\n%s', task, type_name, error, traceback, exc_info=None)
+        task.status = Task.STATUS_FAILED
 
     def load_task(self, task):
         function = self.import_taskified_function(task.function_name)

@@ -1,4 +1,5 @@
 import datetime
+import traceback
 
 from .models import Task
 
@@ -34,3 +35,23 @@ def task_from_scheduled_task(scheduled_task):
     task.retry_backoff_factor = scheduled_task.retry_backoff_factor
 
     return task
+
+
+def format_exception_traceback(exception):
+    stack = traceback.extract_tb(exception.__traceback__)
+
+    useful_frames = []
+    found_protected_call = False
+    for frame in stack:
+        if frame.name == '_protected_call':
+            found_protected_call = True
+        elif found_protected_call:
+            useful_frames.append(frame)
+
+    if useful_frames:
+        stack = traceback.StackSummary.from_list(useful_frames)
+
+    lines = traceback.format_list(stack)
+    trace = ''.join(lines)
+
+    return trace

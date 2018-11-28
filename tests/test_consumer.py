@@ -50,21 +50,19 @@ class ConsumerTestCase(TransactionTestCase):
         task.refresh_from_db()
         self.assertEqual(task.status, Task.STATUS_CANCELED)
 
-    # def test_consumer_wont_load_not_taskified_function(self):
-    #     """Consumer will refuse to load a regular function not decorated with
-    #     @taskify.
-    #     """
-    #     task = create_task(
-    #         function_name='tests.fixtures.naked_function',
-    #     )
+    def test_consumer_wont_load_not_taskified_function(self):
+        """Consumer will refuse to load a regular function not decorated with
+        @taskify.
+        """
+        task = create_task(
+            function_name='tests.fixtures.naked_function',
+        )
 
-    #     consumer = Consumer()
-    #     consumer.execute_tasks()
+        consumer = Consumer()
+        consumer.execute_tasks()
 
-    #     task.refresh_from_db()
-    #     # FIXME: Right now taskq is raising an exception which is not catched
-    #     # anywhere and will crash the deamon.
-    #     self.assertEqual(task.status, Task.STATUS_FAILED)
+        task.refresh_from_db()
+        self.assertEqual(task.status, Task.STATUS_FAILED)
 
     @override_settings(TASKQ={
         'schedule': {

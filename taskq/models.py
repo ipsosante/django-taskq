@@ -2,8 +2,9 @@ import datetime
 import json
 import uuid
 
-from django.db import models
 from django.core.exceptions import ValidationError
+from django.db import models
+from django.utils import timezone
 
 from .json import JSONDecoder, JSONEncoder
 
@@ -53,6 +54,19 @@ class Task(models.Model):
 
     def decode_function_args(self):
         return json.loads(self.function_args, cls=JSONDecoder)
+
+    def update_due_at_after_failure(self):
+        """Update its due_at date taking into account the number of retries and
+        its retry_delay, retry_backoff, and retry_backoff_factor properties.
+        """
+        assert self.retries > 0
+
+        delay = self.retry_delay
+        if self.retry_backoff:
+            delay_seconds = delay.total_seconds() * (self.retry_backoff_factor ** (self.retries - 1))
+            delay = datetime.timedelta(seconds=delay_seconds)
+
+        self.due_at = timezone.now() + delay
 
     def __str__(self):
         s = f'{self.name}, ' if self.name else ''

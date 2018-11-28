@@ -1,11 +1,9 @@
 import inspect
 import json
 import logging
-import sys
 
 from django.utils import timezone
 
-from .exceptions import Retry, Cancel
 from .json import JSONEncoder
 from .models import Task as TaskModel
 from .utils import delay_timedelta
@@ -13,39 +11,24 @@ from .utils import delay_timedelta
 logger = logging.getLogger('taskq')
 
 
-class TaskifyRunContext(object):
-
+class TaskifyRunContext:
     def __init__(self, task):
         self.task = task
 
 
-class Taskify(object):
-    _name = None
-    _function = None
-
+class Taskify:
     def __init__(self, function, name=None):
-
         self._function = function
         self._name = name
 
+    # If you rename this method, update the code in utils.format_exception_traceback
     def _protected_call(self, kwargs):
+        task_args = inspect.getargspec(self._function).args
 
-        try:
+        if len(task_args) > 0 and task_args[0] == 'self':
+            kwargs['self'] = TaskifyRunContext(None)
 
-            task_args = inspect.getargspec(self._function).args
-
-            if len(task_args) > 0 and task_args[0] == 'self':
-                kwargs['self'] = TaskifyRunContext(None)
-
-            self._function(**kwargs)
-
-        except Exception as e:
-
-            if isinstance(e, Retry) or isinstance(e, Cancel):
-                raise
-
-            logger.exception('Taskq: ' + str(e), exc_info=sys.exc_info())
-            raise Retry()
+        self._function(**kwargs)
 
     def apply(self, *args, **kwargs):
 
@@ -93,8 +76,11 @@ class Taskify(object):
         return task
 
 
-def taskify(*args, **kwargs):
-    def _taskify(func):
-        return Taskify(func, **kwargs)
+def taskify(func=None, name=None):
+    def wrapper_taskify(_func):
+        return Taskify(_func, name=name)
 
-    return _taskify
+    if func is None:
+        return wrapper_taskify
+    else:
+        return wrapper_taskify(func)
