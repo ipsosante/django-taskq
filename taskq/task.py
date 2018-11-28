@@ -1,4 +1,3 @@
-import inspect
 import json
 import logging
 
@@ -11,11 +10,6 @@ from .utils import delay_timedelta
 logger = logging.getLogger('taskq')
 
 
-class TaskifyRunContext:
-    def __init__(self, task):
-        self.task = task
-
-
 class Taskify:
     def __init__(self, function, name=None):
         self._function = function
@@ -23,45 +17,14 @@ class Taskify:
 
     # If you rename this method, update the code in utils.format_exception_traceback
     def _protected_call(self, kwargs):
-        task_args = inspect.getargspec(self._function).args
-
-        if len(task_args) > 0 and task_args[0] == 'self':
-            kwargs['self'] = TaskifyRunContext(None)
-
         self._function(**kwargs)
-
-    @property
-    def func_name(self):
-        return '%s.%s' % (self._function.__module__, self._function.__name__)
-
-    @property
-    def name(self):
-        return self._name if self._name else self.func_name
 
     def apply(self, *args, **kwargs):
-
-        task_args = inspect.getargspec(self._function).args
-
-        if len(task_args) > 0 and task_args[0] == 'self':
-            kwargs['self'] = TaskifyRunContext(None)
-            task_args.pop(0)
-
-        for i, arg in enumerate(args):
-            kwargs[task_args[i]] = arg
-
-        self._function(**kwargs)
+        return self._function(*args, **kwargs)
 
     def apply_async(self, due_at=None, max_retries=3, retry_delay=0,
                     retry_backoff=False, retry_backoff_factor=2, args=[],
                     kwargs={}):
-
-        task_args = inspect.getargspec(self._function).args
-
-        if len(task_args) > 0 and task_args[0] == 'self':
-            task_args.pop(0)
-
-        for i, arg in enumerate(args):
-            kwargs[task_args[i]] = arg
 
         if not due_at:
             due_at = timezone.now()
@@ -79,6 +42,14 @@ class Taskify:
         task.save()
 
         return task
+
+    @property
+    def func_name(self):
+        return '%s.%s' % (self._function.__module__, self._function.__name__)
+
+    @property
+    def name(self):
+        return self._name if self._name else self.func_name
 
 
 def taskify(func=None, name=None):
