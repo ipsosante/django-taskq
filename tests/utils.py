@@ -1,5 +1,7 @@
+from functools import partial
 import threading
 
+from django.db import connections
 from django.utils.timezone import now
 
 from taskq.consumer import Consumer
@@ -33,20 +35,48 @@ def create_task(**kwargs):
     return task
 
 
-def create_background_consumers(count, auto_start=True, *args, **kwargs):
-    """Create new Consumer instances on background threads, and return a tuple
-    ([consumer], [thread]).
+def create_background_consumers(count, before_start=None, target='run', *args, **kwargs):
+    """Create new Consumer instances on background threads, starts them, and
+    return a tuple ([consumer], [thread]).
+
+    :param count: The number of Consumer instances to start.
+    :param before_start: A callable that will be called with each consumer as
+    an argument before the threads are started.
+    :param target: The name of the method of the Consumer that will be run.
+
+    The remaining arguments of the function are passed to the __init__() method
+    of each Consumer.
     """
+
     consumers = []
     threads = []
     for _ in range(count):
         consumer = Consumer(*args, **kwargs)
         consumers.append(consumer)
-        thread = threading.Thread(target=consumer.run)
+
+        thread_target = partial(_consumer_run_and_close_connection, consumer, target)
+        thread = threading.Thread(target=thread_target)
         threads.append(thread)
 
-    if auto_start:
-        for thread in threads:
-            thread.start()
+    if before_start:
+        for consumer in consumers:
+            before_start(consumer)
+
+    for thread in threads:
+        thread.start()
 
     return (consumers, threads)
+
+
+def _consumer_run_and_close_connection(consumer, target):
+    """Execute the `target` method of `consumer`, then manually close all
+    database connections.
+
+    These aren't automatically closed by Django.
+    See https://code.djangoproject.com/ticket/22420.
+    """
+    method = getattr(consumer, target)
+    method()
+
+    for connection in connections.all():
+        connection.close()

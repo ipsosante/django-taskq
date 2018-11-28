@@ -1,3 +1,7 @@
+"""Integration tests designed to test the Consumer behavior when multiple
+instances are running in parallel.
+"""
+
 import threading
 from datetime import timedelta
 
@@ -51,23 +55,21 @@ class ConsumerMultiProcessTestCase(TransactionTestCase):
         }
     })
     def test_multiple_consumers_create_task_for_due_scheduled_task(self):
-        # Create consumers running in parallel
-        consumers_count = 2
-        consumers, threads = create_background_consumers(
-            consumers_count,
-            auto_start=False,
-            sleep_rate=0.1,
-        )
-
-        for consumer in consumers:
+        def prepare_scheduled_task(consumer):
             # Hack the due_at date to simulate the fact that the task was run
             # once already.
             assert len(consumer._scheduler._tasks) == 1
             scheduled_task = consumer._scheduler._tasks[0]
             scheduled_task.due_at -= timedelta(days=1)
 
-        for thread in threads:
-            thread.start()
+        # Create consumers running in parallel
+        consumers_count = 2
+        consumers, threads = create_background_consumers(
+            consumers_count,
+            before_start=prepare_scheduled_task,
+            sleep_rate=0.1
+        )
+
         for consumer in consumers:
             consumer.stop()
         for thread in threads:

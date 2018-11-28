@@ -2,11 +2,10 @@ import datetime
 import importlib
 import logging
 import threading
-import signal
 
 from time import sleep
 
-from django.db import connections, transaction
+from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
 
@@ -42,11 +41,6 @@ class Consumer:
         self._sleep_rate = sleep_rate
         self._execute_tasks_barrier = execute_tasks_barrier
 
-        signal.signal(signal.SIGINT, self.sigint_handler)
-
-    def sigint_handler(self, sig, frame):
-        self.stop()
-
     def stop(self):
         logger.info('Consumer was asked to quit. '
                     'Terminating process in %ss.', self._sleep_rate)
@@ -63,17 +57,6 @@ class Consumer:
             self.execute_tasks()
 
             sleep(self._sleep_rate)
-
-        self.close_connections()
-
-    def close_connections(self):
-        """Close connections on this thread.
-
-        They aren't automatically closed by Django.
-        See https://code.djangoproject.com/ticket/22420.
-        """
-        for connection in connections.all():
-            connection.close()
 
     def create_scheduled_tasks(self):
         """Register new tasks for each scheduled (recurring) tasks defined in
