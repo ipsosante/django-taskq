@@ -8,14 +8,40 @@ def naked_function():
     pass
 
 
-@taskify()
+@taskify
 def do_nothing():
     pass
 
 
-@taskify()
+@taskify
 def self_cancelling():
     raise Cancel()
+
+
+@taskify
+def failing():
+    raise ValueError('Task is failing')
+
+
+@taskify
+def failing_alphabet():
+    a()
+
+
+def a():
+    b()
+
+
+def b():
+    c()
+
+
+def c():
+    d()
+
+
+def d():
+    raise ValueError('I don\'t know what comes after "d"')
 
 
 ###############################################################################

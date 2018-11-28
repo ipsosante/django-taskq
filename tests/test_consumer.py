@@ -64,6 +64,44 @@ class ConsumerTestCase(TransactionTestCase):
         task.refresh_from_db()
         self.assertEqual(task.status, Task.STATUS_FAILED)
 
+    def test_consumer_will_catch_task_exceptions(self):
+        """Consumer will catch and log exceptions raised by the tasks."""
+        task = create_task(
+            function_name='tests.fixtures.failing',
+            max_retries=0
+        )
+
+        consumer = Consumer()
+        consumer.execute_tasks()
+
+        task.refresh_from_db()
+        self.assertEqual(task.status, Task.STATUS_FAILED)
+
+    def test_consumer_logs_cleaned_backtrace(self):
+        """Consumer will log catched exceptions with internal frames removed
+        from the backtrace."""
+        create_task(
+            function_name='tests.fixtures.failing_alphabet',
+            max_retries=0
+        )
+
+        consumer = Consumer()
+
+        with self.assertLogs('taskq', level='ERROR') as context_manager:
+            consumer.execute_tasks()
+
+        output = ''.join(context_manager.output)
+        lines = output.splitlines()
+
+        self.assertIn('ValueError', lines[0])
+        self.assertIn('I don\'t know what comes after "d"', lines[0])
+
+        # Check that we are getting the expected function names in the traceback
+        expected_functions = ['failing_alphabet', 'a', 'b', 'c', 'd']
+        file_lines = [l for i, l in enumerate(lines[1:]) if i % 2 == 0]
+        for i, expected_function in enumerate(expected_functions):
+            self.assertIn(expected_function, file_lines[i])
+
     @override_settings(TASKQ={
         'schedule': {
             'my-scheduled-task': {
