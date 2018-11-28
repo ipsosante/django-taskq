@@ -21,10 +21,14 @@ class Taskify:
         return self._function(*args, **kwargs)
 
     def apply_async(self, due_at=None, max_retries=3, retry_delay=0,
-                    retry_backoff=False, retry_backoff_factor=2, args=[], kwargs={}):
+                    retry_backoff=False, retry_backoff_factor=2, args=None, kwargs=None):
 
-        if not due_at:
+        if due_at is None:
             due_at = timezone.now()
+        if args is None:
+            args = []
+        if kwargs is None:
+            kwargs = {}
 
         task = TaskModel()
         task.due_at = due_at
