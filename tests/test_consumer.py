@@ -1,7 +1,7 @@
 import threading
 from datetime import timedelta
 
-from django.test import TestCase, TransactionTestCase, override_settings
+from django.test import TransactionTestCase, override_settings
 from django.utils.timezone import now
 
 from taskq.consumer import Consumer
@@ -89,7 +89,7 @@ class ConsumerTestCase(TransactionTestCase):
         self.assertEqual(queued_tasks, 1)
 
 
-class ImportTaskifiedFunctionTestCase(TestCase):
+class ImportTaskifiedFunctionTestCase(TransactionTestCase):
 
     def test_can_import_existing_task(self):
         """Consumer can import a valid and existing @taskified function."""

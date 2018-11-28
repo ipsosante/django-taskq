@@ -1,12 +1,12 @@
 import datetime
 
-from django.test import TestCase
+from django.test import TransactionTestCase
 
 from taskq.utils import delay_timedelta, task_from_scheduled_task
 from taskq.scheduler import ScheduledTask
 
 
-class UtilsDelayTimedeltaTestCase(TestCase):
+class UtilsDelayTimedeltaTestCase(TransactionTestCase):
 
     def test_delay_timedelta_returns_input_if_timedelta(self):
         """delay_timedelta returns the passer input parameter if it is already
@@ -34,7 +34,7 @@ class UtilsDelayTimedeltaTestCase(TestCase):
         self.assertRaises(TypeError, delay_timedelta, [2, 45])
 
 
-class UtilsTaskFromScheduledTaskTestCase(TestCase):
+class UtilsTaskFromScheduledTaskTestCase(TransactionTestCase):
 
     def test_can_create_task_from_scheduled_task(self):
         """task_from_scheduled_task creates a new Task from a ScheduledTask."""

@@ -1,4 +1,4 @@
-from django.test import TestCase
+from django.test import TransactionTestCase
 from django.utils.timezone import now
 from django.db.utils import IntegrityError
 from django.core.exceptions import ValidationError
@@ -6,7 +6,7 @@ from django.core.exceptions import ValidationError
 from taskq.models import Task
 
 
-class TaskTestCase(TestCase):
+class TaskTestCase(TransactionTestCase):
 
     def test_cannot_create_task_without_function_name(self):
         """Tasks cannot be created without a function name."""
