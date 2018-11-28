@@ -54,14 +54,17 @@ class Consumer:
             self.execute_tasks()
 
             sleep(self._sleep_rate)
-        # Close connections on this thread. They aren't automatically closed by
-        # Django. See https://code.djangoproject.com/ticket/22420
+
+        self.close_connections()
+
+    def close_connections(self):
+        """Close connections on this thread.
+
+        They aren't automatically closed by Django.
+        See https://code.djangoproject.com/ticket/22420.
+        """
         for connection in connections.all():
             connection.close()
-
-    def reset_running_tasks(self):
-        tasks = Task.objects.filter(status=Task.STATUS_RUNNING)
-        tasks.update(status=Task.STATUS_QUEUED)
 
     def create_scheduled_tasks(self):
         """Register new tasks for each scheduled (recurring) tasks defined in
