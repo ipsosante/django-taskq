@@ -31,6 +31,21 @@ def failing():
 
 
 @taskify
+def task_return_42():
+    return 42
+
+
+@taskify
+def task_add(a, b):
+    return a + b
+
+
+@taskify
+def task_divide(a, b=1):
+    return a / b
+
+
+@taskify
 def failing_alphabet():
     a()
 
