@@ -119,17 +119,17 @@ class Consumer:
             function, args, kwargs = self.load_task(task)
             self.execute_task(function, args, kwargs)
         except TaskFatalError as e:
-            logger.error('%s : Fatal error', task)
+            logger.info('%s : Fatal error', task)
             self.fail_task(task, e)
         except Cancel:
             logger.info('%s : Canceled', task)
             task.status = Task.STATUS_CANCELED
         except Exception as e:
             if task.retries < task.max_retries:
-                logger.warning('%s : Failed, will retry', task)
+                logger.info('%s : Failed, will retry', task)
                 self.retry_task(task)
             else:
-                logger.error('%s : Failed, exceeded max retries', task)
+                logger.info('%s : Failed, exceeded max retries', task)
                 self.fail_task(task, e)
         else:
             task.status = Task.STATUS_SUCCESS
