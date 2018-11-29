@@ -13,7 +13,7 @@ class Taskify:
         self._function = function
         self._name = name
 
-    # If you rename this method, update the code in utils.format_exception_traceback
+    # If you rename this method, update the code in utils.traceback_filter_taskq_frames
     def _protected_call(self, args, kwargs):
         self._function(*args, **kwargs)
 

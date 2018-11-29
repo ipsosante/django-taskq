@@ -13,7 +13,7 @@ from .exceptions import Cancel, TaskLoadingError, TaskFatalError
 from .models import Task
 from .scheduler import Scheduler
 from .task import Taskify
-from .utils import task_from_scheduled_task, format_exception_traceback
+from .utils import task_from_scheduled_task, traceback_filter_taskq_frames
 
 logger = logging.getLogger('taskq')
 
@@ -137,15 +137,16 @@ class Consumer:
             task.save()
 
     def retry_task(self, task):
+        task.status = Task.STATUS_QUEUED
         task.retries += 1
         task.update_due_at_after_failure()
-        task.status = Task.STATUS_QUEUED
 
     def fail_task(self, task, error):
-        traceback = format_exception_traceback(error)
-        type_name = error.__class__.__name__
-        logger.exception('%s : %s %s\n%s', task, type_name, error, traceback, exc_info=None)
         task.status = Task.STATUS_FAILED
+        exc_traceback = traceback_filter_taskq_frames(error)
+        type_name = type(error).__name__
+        exc_info = (type(error), error, exc_traceback)
+        logger.exception('%s : %s %s', task, type_name, error, exc_info=exc_info)
 
     def load_task(self, task):
         function = self.import_taskified_function(task.function_name)

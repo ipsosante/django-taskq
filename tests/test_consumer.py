@@ -133,14 +133,21 @@ class ConsumerTestCase(TransactionTestCase):
         output = ''.join(context_manager.output)
         lines = output.splitlines()
 
+        # First line is our custom message
         self.assertIn('ValueError', lines[0])
         self.assertIn('I don\'t know what comes after "d"', lines[0])
 
+        # Skip the first line (our message) and the second one ("Traceback
+        # (most recent call last)")
+        lines = lines[2:]
+
+        # Only check the even lines (containing the filename, line and function name)
+        relevant_lines = [l for i, l in enumerate(lines) if i % 2 == 0]
+
         # Check that we are getting the expected function names in the traceback
-        expected_functions = ['failing_alphabet', 'a', 'b', 'c', 'd']
-        file_lines = [l for i, l in enumerate(lines[1:]) if i % 2 == 0]
+        expected_functions = ['_protected_call', 'failing_alphabet', 'a', 'b', 'c', 'd']
         for i, expected_function in enumerate(expected_functions):
-            self.assertIn(expected_function, file_lines[i])
+            self.assertIn(expected_function, relevant_lines[i])
 
     @override_settings(TASKQ={
         'schedule': {

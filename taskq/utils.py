@@ -37,21 +37,29 @@ def task_from_scheduled_task(scheduled_task):
     return task
 
 
-def format_exception_traceback(exception):
-    stack = traceback.extract_tb(exception.__traceback__)
+def traceback_filter_taskq_frames(exception):
+    """Will return the traceback of the passed exception without the taskq
+    internal frames except the last one (which will be "_protected_call" in
+    most cases).
+    """
+    exc_traceback = exception.__traceback__
+    stack = traceback.extract_tb(exc_traceback)
 
-    useful_frames = []
+    # Find the number of internal frame we need to skip using the StackSummary
+    n_skiped_frames = 0
     found_protected_call = False
     for frame in stack:
         if frame.name == '_protected_call':
             found_protected_call = True
-        elif found_protected_call:
-            useful_frames.append(frame)
+            break
 
-    if useful_frames:
-        stack = traceback.StackSummary.from_list(useful_frames)
+        n_skiped_frames += 1
 
-    lines = traceback.format_list(stack)
-    trace = ''.join(lines)
+    if not found_protected_call:
+        return exc_traceback
 
-    return trace
+    # Unroll the traceback until the taskq frames are not included anymore
+    for _ in range(n_skiped_frames):
+        exc_traceback = exc_traceback.tb_next
+
+    return exc_traceback
