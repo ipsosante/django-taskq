@@ -76,6 +76,11 @@ class Task(models.Model):
         self.due_at = timezone.now() + delay
 
     def __str__(self):
-        str_repr = f'{self.name}, ' if self.name else ''
-        str_repr += str(self.uuid)
+        status = dict(self.STATUS_CHOICES)[self.status]
+
+        str_repr = f'<{self.__class__.__name__} '
+        if self.name:
+            str_repr += f'{self.name}, '
+        str_repr += f'{self.uuid}, status={status}>'
+
         return str_repr
