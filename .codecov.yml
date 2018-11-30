@@ -1,6 +1,4 @@
 ignore:
-  - ./runtests.py
   - ./setup.py
-  - demo
   - tests
   - taskq/migrations
