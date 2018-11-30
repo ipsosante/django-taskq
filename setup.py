@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from setuptools import setup
+from setuptools import setup, find_packages
 
 setup(
     name='django-taskq',
@@ -10,9 +10,7 @@ setup(
     author_email='contact@ipsosante.fr',
     url='https://github.com/ipsosante/django-taskq',
     long_description='',
-    packages=[
-        'taskq',
-    ],
+    packages=find_packages(exclude=['tests']),
     zip_safe=False,
     install_requires=[
         'django >= 1.9, < 2.0',
