@@ -40,14 +40,12 @@ class Task(models.Model):
     retry_backoff = models.BooleanField(null=False, default=False)
     retry_backoff_factor = models.IntegerField(null=False, default=2)
 
-    def save(self, force_insert=False, force_update=False, using=None,
-             update_fields=None):
+    def save(self, *args, **kwargs):
         """Do not allow the Task to be saved with an empty function name."""
         if self.function_name == "":
             raise ValidationError('Task.function_name cannot be empty')
 
-        super().save(force_insert=force_insert, force_update=force_update,
-                     using=None, update_fields=None)
+        super().save(*args, **kwargs)
 
     def encode_function_args(self, args=None, kwargs=None):
         if not kwargs:
