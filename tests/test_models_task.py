@@ -41,6 +41,24 @@ class TaskTestCase(TransactionTestCase):
         task.save()
         self.assertTrue(task.uuid in str(task))
 
+    def test_tasks_repr_contains_name_if_set(self):
+        """The string representation of a Task contains its name if one was set."""
+        task = Task()
+        task.due_at = now()
+        task.function_name = "tests.fixtures.do_nothing"
+        task.name = 'Banana'
+        task.save()
+        self.assertTrue('Banana' in str(task))
+
+    def test_tasks_repr_contains_status_string(self):
+        """The string representation of a Task contains its status as a readable string."""
+        task = Task()
+        task.due_at = now()
+        task.function_name = "tests.fixtures.do_nothing"
+        task.status = Task.STATUS_RUNNING
+        task.save()
+        self.assertTrue('Running' in str(task))
+
     def test_tasks_update_due_at_simple(self):
         """The task updates its due_at after an execution failure."""
         base_due_at = datetime.datetime(2018, 11, 28, hour=20, tzinfo=timezone.utc)
