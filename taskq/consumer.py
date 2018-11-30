@@ -127,7 +127,7 @@ class Consumer:
         except Exception as e:
             if task.retries < task.max_retries:
                 logger.info('%s : Failed, will retry', task)
-                self.retry_task(task)
+                self.retry_task_later(task)
             else:
                 logger.info('%s : Failed, exceeded max retries', task)
                 self.fail_task(task, e)
@@ -136,7 +136,7 @@ class Consumer:
         finally:
             task.save()
 
-    def retry_task(self, task):
+    def retry_task_later(self, task):
         task.status = Task.STATUS_QUEUED
         task.retries += 1
         task.update_due_at_after_failure()
