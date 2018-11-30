@@ -132,6 +132,7 @@ class Consumer:
                 logger.info('%s : Failed, exceeded max retries', task)
                 self.fail_task(task, e)
         else:
+            logger.info('%s : Success', task)
             task.status = Task.STATUS_SUCCESS
         finally:
             task.save()
