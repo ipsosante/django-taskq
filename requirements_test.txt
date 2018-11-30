@@ -1,0 +1,8 @@
+-r requirements.txt
+
+flake8>=3.6.0
+codecov>=2.0.15
+psycopg2>=2.7.4 --no-binary psycopg2
+pytest>=4.0.0
+pytest-django>=3.4.4
+pytest-cov>=2.6.0
