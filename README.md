@@ -67,6 +67,15 @@ If you want to run `django-admin` commands, you'll need to set `DJANGO_SETTINGS_
 
     export DJANGO_SETTINGS_MODULE=tests.settings
 
+
+----------
+
+To create a new release of django-taskq, use [bumpversion](https://pypi.org/project/bumpversion/). e.g.:
+
+    bumpversion minor
+    
+This will update all the necessary files and commit + tag the changes.
+
 ## License
 
 django-taskq is released under the MIT license. See LICENSE for details.
