@@ -37,7 +37,7 @@ Setup the PostgreSQL database:
     initdb /path/to/database/storage  # For example /usr/local/var/postgres
 
     # Start PostgreSQL on port 5433
-    pg_ctl -D /path/to/database/storage -p 5433 start
+    pg_ctl -D /path/to/database/storage -o "-p 5433" start
 
     # Create a postgres user allowed to create our test database
     psql -p 5433 -d postgres -c "CREATE USER postgres WITH PASSWORD 'IN0vRycvrF' CREATEDB"
