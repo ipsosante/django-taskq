@@ -1,4 +1,3 @@
-import threading
 from datetime import timedelta
 
 from django.test import TransactionTestCase, override_settings
@@ -8,17 +7,17 @@ from taskq.consumer import Consumer
 from taskq.models import Task
 from taskq.exceptions import TaskLoadingError
 
-from .utils import create_task
+from .utils import create_task, create_background_consumers
 
 
 class ConsumerTestCase(TransactionTestCase):
 
     def test_consumer_can_stop(self):
         """Consumer can be stopped."""
-        consumer = Consumer(sleep_rate=0.1)
+        consumers, threads = create_background_consumers(1, sleep_rate=0.1)
+        consumer = consumers[0]
+        thread = threads[0]
 
-        thread = threading.Thread(target=consumer.run)
-        thread.start()
         self.assertTrue(thread.is_alive())
 
         consumer.stop()
