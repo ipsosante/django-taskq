@@ -13,7 +13,7 @@ from .exceptions import Cancel, TaskLoadingError, TaskFatalError
 from .models import Task
 from .scheduler import Scheduler
 from .task import Taskify
-from .utils import task_from_scheduled_task, traceback_filter_taskq_frames
+from .utils import task_from_scheduled_task, traceback_filter_taskq_frames, ordinal
 
 logger = logging.getLogger('taskq')
 
@@ -110,7 +110,11 @@ class Consumer:
 
     def process_task(self, task):
         """Load and execute the task"""
-        logger.info('%s : Started', task)
+        if not task.retries:
+            logger.info('%s : Started', task)
+        else:
+            nth = ordinal(task.retries)
+            logger.info('%s : Started (%s retry)', task, nth)
 
         task.status = Task.STATUS_RUNNING
         task.save()

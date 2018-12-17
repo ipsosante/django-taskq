@@ -129,9 +129,8 @@ class ConsumerTestCase(TransactionTestCase):
 
         with self.assertLogs('taskq', level='ERROR') as context_manager:
             consumer.execute_tasks()
-
-        output = ''.join(context_manager.output)
-        lines = output.splitlines()
+            output = ''.join(context_manager.output)
+            lines = output.splitlines()
 
         # First line is our custom message
         self.assertIn('ValueError', lines[0])
@@ -172,6 +171,34 @@ class ConsumerTestCase(TransactionTestCase):
 
         queued_tasks = Task.objects.filter(status=Task.STATUS_QUEUED).count()
         self.assertEqual(queued_tasks, 1)
+
+    def test_consumer_logs_task_started(self):
+        """Consumer will log that a task has started."""
+        due_at = now() - timedelta(milliseconds=100)
+        task = create_task(due_at=due_at)
+
+        consumer = Consumer()
+        with self.assertLogs('taskq', level='INFO') as context_manager:
+            consumer.execute_tasks()
+            output = ''.join(context_manager.output)
+
+        self.assertIn(task.uuid, output)
+        self.assertIn('Started', output)
+
+    def test_consumer_logs_task_started_nth_rety(self):
+        """Consumer will log that a task has started and is executing its nth rety."""
+        due_at = now() - timedelta(milliseconds=100)
+        task = create_task(function_name='tests.fixtures.failing', due_at=due_at)
+
+        consumer = Consumer()
+        consumer.execute_tasks()
+
+        with self.assertLogs('taskq', level='INFO') as context_manager:
+            consumer.execute_tasks()
+            output = ''.join(context_manager.output)
+
+        self.assertIn(task.uuid, output)
+        self.assertIn('Started (1st retry)', output)
 
 
 class ImportTaskifiedFunctionTestCase(TransactionTestCase):
