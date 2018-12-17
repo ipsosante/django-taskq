@@ -2,7 +2,7 @@ import datetime
 
 from django.test import TransactionTestCase
 
-from taskq.utils import delay_timedelta, task_from_scheduled_task
+from taskq.utils import delay_timedelta, task_from_scheduled_task, ordinal
 from taskq.scheduler import ScheduledTask
 
 
@@ -56,3 +56,42 @@ class UtilsTaskFromScheduledTaskTestCase(TransactionTestCase):
         self.assertEqual(task.retry_delay, datetime.timedelta(seconds=22))
         self.assertEqual(task.retry_backoff, True)
         self.assertEqual(task.retry_backoff_factor, 2)
+
+
+class UtilsOrdinalTestCase(TransactionTestCase):
+
+    def test_ordinal_1(self):
+        """ordinal(1) -> 1st"""
+        self.assertEqual(ordinal(1), '1st')
+
+    def test_ordinal_2(self):
+        """ordinal(2) -> 2nd"""
+        self.assertEqual(ordinal(2), '2nd')
+
+    def test_ordinal_3(self):
+        """ordinal(3) -> 3rd"""
+        self.assertEqual(ordinal(3), '3rd')
+
+    def test_ordinal_4(self):
+        """ordinal(4) -> 4th"""
+        self.assertEqual(ordinal(4), '4th')
+
+    def test_ordinal_5(self):
+        """ordinal(5) -> 5th"""
+        self.assertEqual(ordinal(5), '5th')
+
+    def test_ordinal_10(self):
+        """ordinal(10) -> 10th"""
+        self.assertEqual(ordinal(10), '10th')
+
+    def test_ordinal_11(self):
+        """ordinal(11) -> 11th"""
+        self.assertEqual(ordinal(11), '11th')
+
+    def test_ordinal_21(self):
+        """ordinal(21) -> 21st"""
+        self.assertEqual(ordinal(21), '21st')
+
+    def test_ordinal_1250239(self):
+        """ordinal(1250239) -> 1250239th"""
+        self.assertEqual(ordinal(1250239), '1250239th')

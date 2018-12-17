@@ -1,7 +1,15 @@
 import datetime
+import math
 import traceback
 
 from .models import Task
+
+
+def ordinal(n):
+    """Output the ordinal representation ("1st", "2nd", "3rd", etc.) of any number."""
+    # https://stackoverflow.com/a/20007730/404321
+    suffix = "tsnrhtdd"[(math.floor(n / 10) % 10 != 1) * (n % 10 < 4) * n % 10::4]
+    return f'{n}{suffix}'
 
 
 def delay_timedelta(delay):
