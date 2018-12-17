@@ -125,6 +125,17 @@ class TaskifyApplyAsyncTestCase(TransactionTestCase):
         task = Task.objects.first()
         self.assertEqual(task.retry_delay, datetime.timedelta(seconds=3600))
 
+    def test_taskify_apply_async_retry_delay_is_not_applied_on_first_execution(self):
+        """A task created with apply_async() and with a non-null retry_delay parameter will
+        not apply this delay on its first execution."""
+        before = timezone.now()
+        fixtures.do_nothing.apply_async(retry_delay=3600)
+        after = timezone.now()
+
+        task = Task.objects.first()
+        self.assertGreaterEqual(task.due_at, before)
+        self.assertLessEqual(task.due_at, after)
+
     def test_taskify_apply_async_retry_delay(self):
         """A task created with apply_async() accepts a timedelta for its retry_delay parameter."""
         delay = datetime.timedelta(hours=3, minutes=24)
