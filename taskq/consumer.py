@@ -70,7 +70,7 @@ class Consumer:
         with LockedTransaction(Task, "SHARE ROW EXCLUSIVE"):
             for scheduled_task in self._scheduler.due_tasks:
                 task_exists = Task.objects.filter(
-                    function_name=scheduled_task.function_name,
+                    name=scheduled_task.name,
                     due_at=scheduled_task.due_at
                 ).exists()
 
