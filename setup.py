@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='django-taskq',
-    version='0.2.2',
+    version='0.2.3',
     description='Yet another task queue',
     author='ipso sante',
     author_email='contact@ipsosante.fr',
