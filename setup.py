@@ -13,7 +13,6 @@ setup(
     packages=find_packages(exclude=['tests']),
     zip_safe=False,
     install_requires=[
-        'django >= 1.9, < 2.0',
         'croniter >= 0.3, <=0.4',
     ],
 )
