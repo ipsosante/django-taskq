@@ -63,12 +63,17 @@ class Consumer:
         """Register new tasks for each scheduled (recurring) tasks defined in
         the project settings.
         """
+        due_tasks = self._scheduler.due_tasks
+
+        if not due_tasks:
+            return
+
         # Multiple instances of taskq rely on the SHARE ROW EXCLUSIV lock.
         # This mode protects a table against concurrent data changes, and is
         # self-exclusive so that only one session can hold it at a time.
         # See https://www.postgresql.org/docs/10/explicit-locking.html
         with LockedTransaction(Task, "SHARE ROW EXCLUSIVE"):
-            for scheduled_task in self._scheduler.due_tasks:
+            for scheduled_task in due_tasks:
                 task_exists = Task.objects.filter(
                     name=scheduled_task.name,
                     due_at=scheduled_task.due_at
