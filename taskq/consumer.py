@@ -4,6 +4,8 @@ import threading
 
 from time import sleep
 
+import timeout_decorator
+
 from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
@@ -124,9 +126,13 @@ class Consumer:
         task.status = Task.STATUS_RUNNING
         task.save()
 
-        try:
+        @timeout_decorator.timeout(60 * 5)
+        def _execute_task():
             function, args, kwargs = self.load_task(task)
             self.execute_task(function, args, kwargs)
+
+        try:
+            _execute_task()
         except TaskFatalError as e:
             logger.info('%s : Fatal error', task)
             self.fail_task(task, e)
