@@ -126,7 +126,7 @@ class Consumer:
         task.status = Task.STATUS_RUNNING
         task.save()
 
-        @timeout_decorator.timeout(60 * 5)
+        @timeout_decorator.timeout(60 * 5, use_signals=False)
         def _execute_task():
             function, args, kwargs = self.load_task(task)
             self.execute_task(function, args, kwargs)
