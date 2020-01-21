@@ -3,7 +3,7 @@ import logging
 from django.utils import timezone
 
 from .models import Task as TaskModel
-from .utils import delay_timedelta
+from .utils import parse_timedelta
 
 logger = logging.getLogger('taskq')
 
@@ -37,7 +37,7 @@ class Taskify:
         task.function_name = self.func_name
         task.encode_function_args(args, kwargs)
         task.max_retries = max_retries
-        task.retry_delay = delay_timedelta(retry_delay)
+        task.retry_delay = parse_timedelta(retry_delay)
         task.retry_backoff = retry_backoff
         task.retry_backoff_factor = retry_backoff_factor
         task.save()
