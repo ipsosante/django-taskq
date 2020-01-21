@@ -39,6 +39,7 @@ class Task(models.Model):
     retry_delay = models.DurationField(null=False, default=datetime.timedelta(seconds=0))
     retry_backoff = models.BooleanField(null=False, default=False)
     retry_backoff_factor = models.IntegerField(null=False, default=2)
+    timeout = models.DurationField(null=False, default=datetime.timedelta(seconds=0))
 
     def save(self, *args, **kwargs):
         """Do not allow the Task to be saved with an empty function name."""

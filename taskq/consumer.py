@@ -126,13 +126,16 @@ class Consumer:
         task.status = Task.STATUS_RUNNING
         task.save()
 
-        @timeout_decorator.timeout(60 * 5, use_signals=False)
         def _execute_task():
             function, args, kwargs = self.load_task(task)
             self.execute_task(function, args, kwargs)
 
         try:
-            _execute_task()
+            if task.timeout:
+                assert threading.current_thread() is threading.main_thread()
+                timeout_decorator.timeout(_execute_task, task.timeout.total_seconds(), use_signals=True)
+            else:
+                _execute_task()
         except TaskFatalError as e:
             logger.info('%s : Fatal error', task)
             self.fail_task(task, e)
