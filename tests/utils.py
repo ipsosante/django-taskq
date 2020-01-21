@@ -29,6 +29,8 @@ def create_task(**kwargs):
         task.retry_backoff = kwargs['retry_backoff']
     if 'retry_backoff_factor' in kwargs:
         task.retry_backoff_factor = kwargs['retry_backoff_factor']
+    if 'timeout' in kwargs:
+        task.timeout = kwargs['timeout']
 
     task.save()
 
