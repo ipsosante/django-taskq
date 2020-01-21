@@ -16,6 +16,10 @@ from . import fixtures
 
 class ConsumerMultiProcessTestCase(TransactionTestCase):
 
+    # To run these tests, create_background_consumers uses threads.
+    # This is not compatible with current timeout implementation based on signals.
+    # Hence we force timeout at 0.
+
     def test_multiple_consumers_run_due_tasks_once(self):
         """Multiple Consumers running in parallel will execute each task only
         once.
@@ -25,7 +29,8 @@ class ConsumerMultiProcessTestCase(TransactionTestCase):
         due_at = now() - timedelta(milliseconds=100)
         task = create_task(
             function_name='tests.fixtures.counter_increment',
-            due_at=due_at
+            due_at=due_at,
+            timeout=timedelta(0)
         )
 
         # Create consumers running in parallel
@@ -51,6 +56,7 @@ class ConsumerMultiProcessTestCase(TransactionTestCase):
             'my-scheduled-task': {
                 'task': 'tests.fixtures.do_nothing',
                 'cron': '0 1 * * *',  # crontab(minute=0, hour=1)
+                'timeout': 0
             }
         }
     })
@@ -67,7 +73,7 @@ class ConsumerMultiProcessTestCase(TransactionTestCase):
         consumers, threads = create_background_consumers(
             consumers_count,
             before_start=prepare_scheduled_task,
-            sleep_rate=0.1
+            sleep_rate=0.1,
         )
 
         for consumer in consumers:

@@ -21,7 +21,8 @@ class Taskify:
         return self._function(*args, **kwargs)
 
     def apply_async(self, due_at=None, max_retries=3, retry_delay=0,
-                    retry_backoff=False, retry_backoff_factor=2, args=None, kwargs=None):
+                    retry_backoff=False, retry_backoff_factor=2, timeout=None,
+                    args=None, kwargs=None):
 
         if due_at is None:
             due_at = timezone.now()
@@ -40,6 +41,7 @@ class Taskify:
         task.retry_delay = parse_timedelta(retry_delay)
         task.retry_backoff = retry_backoff
         task.retry_backoff_factor = retry_backoff_factor
+        task.timeout = parse_timedelta(timeout) if timeout is not None else None
         task.save()
 
         return task

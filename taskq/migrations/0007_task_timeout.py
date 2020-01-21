@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-import datetime
 from django.db import migrations, models
 
 
@@ -14,6 +13,6 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='task',
             name='timeout',
-            field=models.DurationField(default=datetime.timedelta(0)),
+            field=models.DurationField(default=None, null=True),
         ),
     ]

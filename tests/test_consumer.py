@@ -120,7 +120,7 @@ class ConsumerTestCase(TransactionTestCase):
         """Consumer will abort a task if it exceeds the timeout."""
         task = create_task(
             function_name='tests.fixtures.never_return',
-            timeout=timedelta(seconds=1)
+            timeout=timedelta(seconds=2)
         )
 
         consumer = Consumer()

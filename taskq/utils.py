@@ -41,6 +41,7 @@ def task_from_scheduled_task(scheduled_task):
     task.retry_delay = scheduled_task.retry_delay
     task.retry_backoff = scheduled_task.retry_backoff
     task.retry_backoff_factor = scheduled_task.retry_backoff_factor
+    task.timeout = scheduled_task.timeout
 
     return task
 

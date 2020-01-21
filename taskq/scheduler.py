@@ -10,7 +10,8 @@ from .utils import parse_timedelta
 class ScheduledTask:
 
     def __init__(self, name, task, cron, args=None, max_retries=3,
-                 retry_delay=0, retry_backoff=False, retry_backoff_factor=2):
+                 retry_delay=0, retry_backoff=False, retry_backoff_factor=2,
+                 timeout=None):
         self.name = name
         self.task = task  # The function to be executed
         self.args = args if args else {}
@@ -19,6 +20,7 @@ class ScheduledTask:
         self.retry_delay = parse_timedelta(retry_delay)
         self.retry_backoff = retry_backoff
         self.retry_backoff_factor = retry_backoff_factor
+        self.timeout = parse_timedelta(timeout) if timeout is not None else None
 
         self.update_due_at()
 

@@ -6,10 +6,12 @@ from time import sleep
 
 import timeout_decorator
 
+from django.conf import settings
 from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
 
+from .constants import TASKQ_DEFAULT_TASK_TIMEOUT
 from .database import LockedTransaction
 from .exceptions import Cancel, TaskLoadingError, TaskFatalError
 from .models import Task
@@ -117,6 +119,11 @@ class Consumer:
 
     def process_task(self, task):
         """Load and execute the task"""
+        if task.timeout is None:
+            timeout = getattr(settings, 'TASKQ_TASK_TIMEOUT', TASKQ_DEFAULT_TASK_TIMEOUT)
+        else:
+            timeout = task.timeout
+
         if not task.retries:
             logger.info('%s : Started', task)
         else:
@@ -131,9 +138,9 @@ class Consumer:
             self.execute_task(function, args, kwargs)
 
         try:
-            if task.timeout:
+            if timeout.total_seconds():
                 assert threading.current_thread() is threading.main_thread()
-                timeout_decorator.timeout(_execute_task, task.timeout.total_seconds(), use_signals=True)
+                timeout_decorator.timeout(seconds=timeout.total_seconds(), use_signals=True)(_execute_task)()
             else:
                 _execute_task()
         except TaskFatalError as e:
@@ -142,6 +149,9 @@ class Consumer:
         except Cancel:
             logger.info('%s : Canceled', task)
             task.status = Task.STATUS_CANCELED
+        except timeout_decorator.TimeoutError as e:
+            logger.info('%s : Timed out', task)
+            self.fail_task(task, e)
         except Exception as e:
             if task.retries < task.max_retries:
                 logger.info('%s : Failed, will retry', task)
