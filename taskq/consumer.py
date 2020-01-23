@@ -13,7 +13,6 @@ from django.db.models import Q
 from django.utils import timezone
 
 from .constants import TASKQ_DEFAULT_TASK_TIMEOUT
-from .database import LockedTransaction
 from .exceptions import Cancel, TaskLoadingError, TaskFatalError
 from .models import Task
 from .scheduler import Scheduler
