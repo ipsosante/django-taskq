@@ -12,7 +12,7 @@ from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
 
-from .constants import TASKQ_DEFAULT_TASK_TIMEOUT
+from .constants import TASKQ_DEFAULT_CONSUMER_SLEEP_RATE, TASKQ_DEFAULT_TASK_TIMEOUT
 from .exceptions import Cancel, TaskLoadingError, TaskFatalError
 from .models import Task
 from .scheduler import Scheduler
@@ -25,9 +25,7 @@ logger = logging.getLogger('taskq')
 class Consumer:
     """Collect and executes tasks when they are due."""
 
-    DEFAULT_SLEEP_RATE = 10  # In seconds
-
-    def __init__(self, sleep_rate=DEFAULT_SLEEP_RATE, execute_tasks_barrier=None):
+    def __init__(self, sleep_rate=TASKQ_DEFAULT_CONSUMER_SLEEP_RATE, execute_tasks_barrier=None):
         """Create a new Consumer.
 
         :param sleep_rate: The time in seconds the consumer will wait between
