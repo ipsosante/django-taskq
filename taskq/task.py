@@ -23,6 +23,18 @@ class Taskify:
     def apply_async(self, due_at=None, max_retries=3, retry_delay=0,
                     retry_backoff=False, retry_backoff_factor=2, timeout=None,
                     args=None, kwargs=None):
+        """Apply a task asynchronously.
+.
+        :param Tuple args: The positional arguments to pass on to the task.
+
+        :parm Dict kwargs: The keyword arguments to pass on to the task.
+
+        :parm due_at: When the task should be executed. (None = now).
+        :type due_at: timedelta or None
+
+        :param timeout: The maximum time a task may run. (int = number of seconds).
+        :type timeout: timedelta or int or None
+        """
 
         if due_at is None:
             due_at = timezone.now()
@@ -41,7 +53,7 @@ class Taskify:
         task.retry_delay = parse_timedelta(retry_delay)
         task.retry_backoff = retry_backoff
         task.retry_backoff_factor = retry_backoff_factor
-        task.timeout = parse_timedelta(timeout) if timeout is not None else None
+        task.timeout = parse_timedelta(timeout, nullable=True)
         task.save()
 
         return task

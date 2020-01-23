@@ -30,7 +30,7 @@ class ConsumerMultiProcessTestCase(TransactionTestCase):
         task = create_task(
             function_name='tests.fixtures.counter_increment',
             due_at=due_at,
-            timeout=timedelta(0)
+            timeout=0
         )
 
         # Create consumers running in parallel
@@ -73,7 +73,7 @@ class ConsumerMultiProcessTestCase(TransactionTestCase):
         consumers, threads = create_background_consumers(
             consumers_count,
             before_start=prepare_scheduled_task,
-            sleep_rate=0.1,
+            sleep_rate=0.1
         )
 
         for consumer in consumers:

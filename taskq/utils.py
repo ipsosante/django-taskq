@@ -12,11 +12,14 @@ def ordinal(n):
     return f'{n}{suffix}'
 
 
-def parse_timedelta(delay):
+def parse_timedelta(delay, nullable=False):
     """A convenience function to create a timedelta from seconds.
 
     You can also pass a timedelta directly to this function and it will be
     returned unchanged."""
+    if delay is None and nullable:
+        return None
+
     if isinstance(delay, datetime.timedelta):
         return delay
 

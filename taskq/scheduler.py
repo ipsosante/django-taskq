@@ -20,7 +20,7 @@ class ScheduledTask:
         self.retry_delay = parse_timedelta(retry_delay)
         self.retry_backoff = retry_backoff
         self.retry_backoff_factor = retry_backoff_factor
-        self.timeout = parse_timedelta(timeout) if timeout is not None else None
+        self.timeout = parse_timedelta(timeout, nullable=True)
 
         self.update_due_at()
 
