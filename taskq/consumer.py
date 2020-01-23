@@ -5,6 +5,7 @@ import threading
 from time import sleep
 
 import timeout_decorator
+from django_pglocks import advisory_lock
 
 from django.conf import settings
 from django.db import transaction
@@ -72,11 +73,10 @@ class Consumer:
         if not due_tasks:
             return
 
-        # Multiple instances of taskq rely on the SHARE ROW EXCLUSIV lock.
-        # This mode protects a table against concurrent data changes, and is
-        # self-exclusive so that only one session can hold it at a time.
-        # See https://www.postgresql.org/docs/10/explicit-locking.html
-        with LockedTransaction(Task, "SHARE ROW EXCLUSIVE"):
+        # Multiple instances of taskq rely on an advisory lock.
+        # This lock is self-exclusive so that only one session can hold it at a time.
+        # https://www.postgresql.org/docs/11/explicit-locking.html#ADVISORY-LOCKS
+        with advisory_lock("taskq_create_scheduled_tasks"):
             for scheduled_task in due_tasks:
                 task_exists = Task.objects.filter(
                     name=scheduled_task.name,
