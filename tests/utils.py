@@ -6,6 +6,7 @@ from django.utils.timezone import now
 
 from taskq.consumer import Consumer
 from taskq.models import Task
+from taskq.utils import parse_timedelta
 
 
 def create_task(**kwargs):
@@ -24,13 +25,13 @@ def create_task(**kwargs):
     if 'max_retries' in kwargs:
         task.max_retries = kwargs['max_retries']
     if 'retry_delay' in kwargs:
-        task.retry_delay = kwargs['retry_delay']
+        task.retry_delay = parse_timedelta(kwargs['retry_delay'])
     if 'retry_backoff' in kwargs:
         task.retry_backoff = kwargs['retry_backoff']
     if 'retry_backoff_factor' in kwargs:
         task.retry_backoff_factor = kwargs['retry_backoff_factor']
     if 'timeout' in kwargs:
-        task.timeout = kwargs['timeout']
+        task.timeout = parse_timedelta(kwargs['timeout'], nullable=True)
 
     task.save()
 
