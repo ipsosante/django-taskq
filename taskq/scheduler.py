@@ -4,21 +4,23 @@ from django.conf import settings
 from django.utils import timezone
 from croniter import croniter
 
-from .utils import delay_timedelta
+from .utils import parse_timedelta
 
 
 class ScheduledTask:
 
     def __init__(self, name, task, cron, args=None, max_retries=3,
-                 retry_delay=0, retry_backoff=False, retry_backoff_factor=2):
+                 retry_delay=0, retry_backoff=False, retry_backoff_factor=2,
+                 timeout=None):
         self.name = name
         self.task = task  # The function to be executed
         self.args = args if args else {}
         self.cron = cron
         self.max_retries = max_retries
-        self.retry_delay = delay_timedelta(retry_delay)
+        self.retry_delay = parse_timedelta(retry_delay)
         self.retry_backoff = retry_backoff
         self.retry_backoff_factor = retry_backoff_factor
+        self.timeout = parse_timedelta(timeout, nullable=True)
 
         self.update_due_at()
 

@@ -12,11 +12,14 @@ def ordinal(n):
     return f'{n}{suffix}'
 
 
-def delay_timedelta(delay):
+def parse_timedelta(delay, nullable=False):
     """A convenience function to create a timedelta from seconds.
 
     You can also pass a timedelta directly to this function and it will be
     returned unchanged."""
+    if delay is None and nullable:
+        return None
+
     if isinstance(delay, datetime.timedelta):
         return delay
 
@@ -41,6 +44,7 @@ def task_from_scheduled_task(scheduled_task):
     task.retry_delay = scheduled_task.retry_delay
     task.retry_backoff = scheduled_task.retry_backoff
     task.retry_backoff_factor = scheduled_task.retry_backoff_factor
+    task.timeout = scheduled_task.timeout
 
     return task
 

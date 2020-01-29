@@ -31,6 +31,12 @@ def failing():
 
 
 @taskify
+def never_return():
+    while True:
+        pass
+
+
+@taskify
 def task_return_42():
     return 42
 
@@ -73,19 +79,22 @@ _COUNTER_LOCK = threading.Lock()
 
 
 def counter_reset():
+    global _COUNTER
+    global _COUNTER_LOCK
     with _COUNTER_LOCK:
-        global _COUNTER
         _COUNTER = 0
 
 
 def counter_get_value():
+    global _COUNTER
+    global _COUNTER_LOCK
     with _COUNTER_LOCK:
-        global _COUNTER
         return _COUNTER
 
 
 @taskify()
 def counter_increment():
+    global _COUNTER
+    global _COUNTER_LOCK
     with _COUNTER_LOCK:
-        global _COUNTER
         _COUNTER += 1

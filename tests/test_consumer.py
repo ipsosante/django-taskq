@@ -116,6 +116,19 @@ class ConsumerTestCase(TransactionTestCase):
         self.assertEqual(task.status, Task.STATUS_FAILED)
         self.assertEqual(task.retries, 2)
 
+    def test_consumer_task_timeout(self):
+        """Consumer will abort a task if it exceeds the timeout."""
+        task = create_task(
+            function_name='tests.fixtures.never_return',
+            timeout=timedelta(seconds=2)
+        )
+
+        consumer = Consumer()
+        consumer.execute_tasks()
+
+        task.refresh_from_db()
+        self.assertEqual(task.status, Task.STATUS_FAILED)
+
     def test_consumer_logs_cleaned_backtrace(self):
         """Consumer will log catched exceptions with internal frames removed
         from the backtrace."""

@@ -4,12 +4,15 @@ import threading
 
 from time import sleep
 
+import timeout_decorator
 from django_pglocks import advisory_lock
 
+from django.conf import settings
 from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
 
+from .constants import TASKQ_DEFAULT_CONSUMER_SLEEP_RATE, TASKQ_DEFAULT_TASK_TIMEOUT
 from .exceptions import Cancel, TaskLoadingError, TaskFatalError
 from .models import Task
 from .scheduler import Scheduler
@@ -22,9 +25,7 @@ logger = logging.getLogger('taskq')
 class Consumer:
     """Collect and executes tasks when they are due."""
 
-    DEFAULT_SLEEP_RATE = 10  # In seconds
-
-    def __init__(self, sleep_rate=DEFAULT_SLEEP_RATE, execute_tasks_barrier=None):
+    def __init__(self, sleep_rate=TASKQ_DEFAULT_CONSUMER_SLEEP_RATE, execute_tasks_barrier=None):
         """Create a new Consumer.
 
         :param sleep_rate: The time in seconds the consumer will wait between
@@ -115,6 +116,11 @@ class Consumer:
 
     def process_task(self, task):
         """Load and execute the task"""
+        if task.timeout is None:
+            timeout = getattr(settings, 'TASKQ_TASK_TIMEOUT', TASKQ_DEFAULT_TASK_TIMEOUT)
+        else:
+            timeout = task.timeout
+
         if not task.retries:
             logger.info('%s : Started', task)
         else:
@@ -124,15 +130,25 @@ class Consumer:
         task.status = Task.STATUS_RUNNING
         task.save()
 
-        try:
+        def _execute_task():
             function, args, kwargs = self.load_task(task)
             self.execute_task(function, args, kwargs)
+
+        try:
+            if timeout.total_seconds():
+                assert threading.current_thread() is threading.main_thread()
+                timeout_decorator.timeout(seconds=timeout.total_seconds(), use_signals=True)(_execute_task)()
+            else:
+                _execute_task()
         except TaskFatalError as e:
             logger.info('%s : Fatal error', task)
             self.fail_task(task, e)
         except Cancel:
             logger.info('%s : Canceled', task)
             task.status = Task.STATUS_CANCELED
+        except timeout_decorator.TimeoutError as e:
+            logger.info('%s : Timed out', task)
+            self.fail_task(task, e)
         except Exception as e:
             if task.retries < task.max_retries:
                 logger.info('%s : Failed, will retry', task)
