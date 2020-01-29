@@ -32,7 +32,9 @@ class Taskify:
         :parm due_at: When the task should be executed. (None = now).
         :type due_at: timedelta or None
 
-        :param timeout: The maximum time a task may run. (int = number of seconds).
+        :param timeout: The maximum time a task may run.
+                        (None = no timeout)
+                        (int = number of seconds)
         :type timeout: timedelta or int or None
         """
 
