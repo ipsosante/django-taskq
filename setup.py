@@ -12,5 +12,10 @@ setup(
     long_description="",
     packages=find_packages(exclude=["tests"]),
     zip_safe=False,
-    install_requires=["django>=1.9, <3.0", "croniter >= 0.3, <=0.4"],
+    install_requires=[
+        "django>=1.9, <3.0",
+        "croniter >= 0.3, <=0.4",
+        "django-pglocks==1.0.4",
+        "timeout-decorator==0.4.1"
+    ]
 )
