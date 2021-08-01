@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="django-taskq",
-    version="0.4.1",
+    version="0.4.2",
     description="Yet another task queue",
     author="ipso sante",
     author_email="contact@ipsosante.fr",
@@ -13,7 +13,7 @@ setup(
     packages=find_packages(exclude=["tests"]),
     zip_safe=False,
     install_requires=[
-        "django>=1.9, <3.0",
+        "django>=3.0",
         "croniter >= 0.3, <=0.4",
         "django-pglocks==1.0.4",
         "timeout-decorator==0.4.1"
