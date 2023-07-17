@@ -102,3 +102,7 @@ Icon
 Network Trash Folder
 Temporary Items
 .apdisk
+
+### apps ###
+# Pycharm / JetBrains IDE
+.idea

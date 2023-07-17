@@ -102,9 +102,8 @@ class Consumer:
     def fetch_due_tasks(self):
         # Multiple instances of taskq rely on select_for_update().
         # This mechanism will lock selected rows until the end of the transaction.
-        # We also fetch STATUS_RUNNING in case of previous inconsistent state.
         due_tasks = Task.objects.filter(
-            Q(status=Task.STATUS_QUEUED) | Q(status=Task.STATUS_RUNNING),
+            Q(status=Task.STATUS_QUEUED),
             due_at__lte=timezone.now()
         ).select_for_update(skip_locked=True)
 
