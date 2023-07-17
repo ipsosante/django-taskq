@@ -16,6 +16,6 @@ setup(
         "django>=3.0",
         "croniter >= 0.3, <=0.4",
         "django-pglocks==1.0.4",
-        "timeout-decorator==0.4.1"
-    ]
+        "timeout-decorator==0.4.1",
+    ],
 )

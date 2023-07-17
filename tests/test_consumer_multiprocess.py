@@ -28,18 +28,14 @@ class ConsumerMultiProcessTestCase(TransactionTestCase):
 
         due_at = now() - timedelta(milliseconds=100)
         task = create_task(
-            function_name='tests.fixtures.counter_increment',
-            due_at=due_at,
-            timeout=0
+            function_name="tests.fixtures.counter_increment", due_at=due_at, timeout=0
         )
 
         # Create consumers running in parallel
         consumers_count = 2
         barrier = threading.Barrier(consumers_count, timeout=5)
         consumers, threads = create_background_consumers(
-            consumers_count,
-            sleep_rate=0.1,
-            execute_tasks_barrier=barrier
+            consumers_count, sleep_rate=0.1, execute_tasks_barrier=barrier
         )
 
         for consumer in consumers:
@@ -51,15 +47,17 @@ class ConsumerMultiProcessTestCase(TransactionTestCase):
         self.assertEqual(task.status, Task.STATUS_SUCCESS)
         self.assertEqual(fixtures.counter_get_value(), 1)
 
-    @override_settings(TASKQ={
-        'schedule': {
-            'my-scheduled-task': {
-                'task': 'tests.fixtures.do_nothing',
-                'cron': '0 1 * * *',  # crontab(minute=0, hour=1)
-                'timeout': 0
+    @override_settings(
+        TASKQ={
+            "schedule": {
+                "my-scheduled-task": {
+                    "task": "tests.fixtures.do_nothing",
+                    "cron": "0 1 * * *",  # crontab(minute=0, hour=1)
+                    "timeout": 0,
+                }
             }
         }
-    })
+    )
     def test_multiple_consumers_create_task_for_due_scheduled_task(self):
         def prepare_scheduled_task(consumer):
             # Hack the due_at date to simulate the fact that the task was run
@@ -71,9 +69,7 @@ class ConsumerMultiProcessTestCase(TransactionTestCase):
         # Create consumers running in parallel
         consumers_count = 2
         consumers, threads = create_background_consumers(
-            consumers_count,
-            before_start=prepare_scheduled_task,
-            sleep_rate=0.1
+            consumers_count, before_start=prepare_scheduled_task, sleep_rate=0.1
         )
 
         for consumer in consumers:

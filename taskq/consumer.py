@@ -1,16 +1,14 @@
 import importlib
 import logging
 import threading
-
 from time import sleep
 
 import timeout_decorator
-from django_pglocks import advisory_lock
-
 from django.conf import settings
 from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
+from django_pglocks import advisory_lock
 
 from .constants import TASKQ_DEFAULT_CONSUMER_SLEEP_RATE, TASKQ_DEFAULT_TASK_TIMEOUT
 from .exceptions import Cancel, TaskLoadingError, TaskFatalError
@@ -19,13 +17,15 @@ from .scheduler import Scheduler
 from .task import Taskify
 from .utils import task_from_scheduled_task, traceback_filter_taskq_frames, ordinal
 
-logger = logging.getLogger('taskq')
+logger = logging.getLogger("taskq")
 
 
 class Consumer:
     """Collect and executes tasks when they are due."""
 
-    def __init__(self, sleep_rate=TASKQ_DEFAULT_CONSUMER_SLEEP_RATE, execute_tasks_barrier=None):
+    def __init__(
+        self, sleep_rate=TASKQ_DEFAULT_CONSUMER_SLEEP_RATE, execute_tasks_barrier=None
+    ):
         """Create a new Consumer.
 
         :param sleep_rate: The time in seconds the consumer will wait between
@@ -43,8 +43,10 @@ class Consumer:
         self._execute_tasks_barrier = execute_tasks_barrier
 
     def stop(self):
-        logger.info('Consumer was asked to quit. '
-                    'Terminating process in less than %ss.', self._sleep_rate)
+        logger.info(
+            "Consumer was asked to quit. " "Terminating process in less than %ss.",
+            self._sleep_rate,
+        )
         self._should_stop.set()
 
     @property
@@ -53,7 +55,7 @@ class Consumer:
 
     def run(self):
         """The main entry point to start the consumer run loop."""
-        logger.info('Consumer started.')
+        logger.info("Consumer started.")
 
         while not self.stopped:
             self.create_scheduled_tasks()
@@ -76,8 +78,7 @@ class Consumer:
         with advisory_lock("taskq_create_scheduled_tasks"):
             for scheduled_task in due_tasks:
                 task_exists = Task.objects.filter(
-                    name=scheduled_task.name,
-                    due_at=scheduled_task.due_at
+                    name=scheduled_task.name, due_at=scheduled_task.due_at
                 ).exists()
 
                 if task_exists:
@@ -116,18 +117,19 @@ class Consumer:
     def process_task(self, task):
         """Load and execute the task"""
         if task.timeout is None:
-            timeout = getattr(settings, 'TASKQ_TASK_TIMEOUT', TASKQ_DEFAULT_TASK_TIMEOUT)
+            timeout = getattr(
+                settings, "TASKQ_TASK_TIMEOUT", TASKQ_DEFAULT_TASK_TIMEOUT
+            )
         else:
             timeout = task.timeout
 
         if not task.retries:
-            logger.info('%s : Started', task)
+            logger.info("%s : Started", task)
         else:
             nth = ordinal(task.retries)
-            logger.info('%s : Started (%s retry)', task, nth)
-
         task.status = Task.STATUS_RUNNING
         task.save()
+            logger.info("%s : Started (%s retry)", task, nth)
 
         def _execute_task():
             function, args, kwargs = self.load_task(task)
@@ -136,27 +138,30 @@ class Consumer:
         try:
             if timeout.total_seconds():
                 assert threading.current_thread() is threading.main_thread()
-                timeout_decorator.timeout(seconds=timeout.total_seconds(), use_signals=True)(_execute_task)()
+                timeout_decorator.timeout(
+                    seconds=timeout.total_seconds(), use_signals=True
+                )(_execute_task)()
             else:
                 _execute_task()
+
         except TaskFatalError as e:
-            logger.info('%s : Fatal error', task)
+            logger.info("%s : Fatal error", task)
             self.fail_task(task, e)
         except Cancel:
-            logger.info('%s : Canceled', task)
+            logger.info("%s : Canceled", task)
             task.status = Task.STATUS_CANCELED
         except timeout_decorator.TimeoutError as e:
-            logger.info('%s : Timed out', task)
+            logger.info("%s : Timed out", task)
             self.fail_task(task, e)
         except Exception as e:
             if task.retries < task.max_retries:
-                logger.info('%s : Failed, will retry', task)
+                logger.info("%s : Failed, will retry", task)
                 self.retry_task_later(task)
             else:
-                logger.info('%s : Failed, exceeded max retries', task)
+                logger.info("%s : Failed, exceeded max retries", task)
                 self.fail_task(task, e)
         else:
-            logger.info('%s : Success', task)
+            logger.info("%s : Success", task)
             task.status = Task.STATUS_SUCCESS
         finally:
             task.save()
@@ -171,7 +176,7 @@ class Consumer:
         exc_traceback = traceback_filter_taskq_frames(error)
         type_name = type(error).__name__
         exc_info = (type(error), error, exc_traceback)
-        logger.exception('%s : %s %s', task, type_name, error, exc_info=exc_info)
+        logger.exception("%s : %s %s", task, type_name, error, exc_info=exc_info)
 
     def load_task(self, task):
         function = self.import_taskified_function(task.function_name)
@@ -185,7 +190,7 @@ class Consumer:
         Returns TaskLoadingError if loading of the function failed.
         """
         # https://stackoverflow.com/questions/3606202
-        module_name, unit_name = import_path.rsplit('.', 1)
+        module_name, unit_name = import_path.rsplit(".", 1)
         try:
             module = importlib.import_module(module_name)
         except (ImportError, SyntaxError) as e:

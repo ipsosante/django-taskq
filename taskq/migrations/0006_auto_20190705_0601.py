@@ -7,24 +7,32 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
 
-    dependencies = [
-        ('taskq', '0005_fix_model_fields_types'),
-    ]
+    dependencies = [("taskq", "0005_fix_model_fields_types")]
 
     operations = [
         migrations.AlterField(
-            model_name='task',
-            name='due_at',
-            field=models.DateTimeField(db_index=True),
+            model_name="task", name="due_at", field=models.DateTimeField(db_index=True)
         ),
         migrations.AlterField(
-            model_name='task',
-            name='name',
-            field=models.CharField(blank=True, db_index=True, default='', max_length=255),
+            model_name="task",
+            name="name",
+            field=models.CharField(
+                blank=True, db_index=True, default="", max_length=255
+            ),
         ),
         migrations.AlterField(
-            model_name='task',
-            name='status',
-            field=models.IntegerField(choices=[(0, 'Queued'), (1, 'Running'), (2, 'Success'), (3, 'Failed'), (4, 'Canceled')], db_index=True, default=0),
+            model_name="task",
+            name="status",
+            field=models.IntegerField(
+                choices=[
+                    (0, "Queued"),
+                    (1, "Running"),
+                    (2, "Success"),
+                    (3, "Failed"),
+                    (4, "Canceled"),
+                ],
+                db_index=True,
+                default=0,
+            ),
         ),
     ]

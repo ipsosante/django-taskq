@@ -27,7 +27,7 @@ def self_cancelling():
 
 @taskify
 def failing():
-    raise ValueError('Task is failing')
+    raise ValueError("Task is failing")
 
 
 @taskify

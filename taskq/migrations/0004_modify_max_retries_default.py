@@ -7,14 +7,10 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
 
-    dependencies = [
-        ('taskq', '0003_make_retry_delay_nonnullable'),
-    ]
+    dependencies = [("taskq", "0003_make_retry_delay_nonnullable")]
 
     operations = [
         migrations.AlterField(
-            model_name='task',
-            name='max_retries',
-            field=models.IntegerField(default=3),
-        ),
+            model_name="task", name="max_retries", field=models.IntegerField(default=3)
+        )
     ]

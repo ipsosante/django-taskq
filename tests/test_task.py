@@ -10,28 +10,29 @@ from . import fixtures
 
 
 class TaskifyDecoratorTestCase(TestCase):
-
     def test_taskify_sets_name(self):
         """The taskify decorator accepts a name parameter passes it to the
         created Taskify object.
         """
+
         def my_function():
             pass
 
-        obj = taskify(my_function, name='MyGreatFunction')
+        obj = taskify(my_function, name="MyGreatFunction")
         self.assertIsInstance(obj, Taskify)
-        self.assertEqual(obj.name, 'MyGreatFunction')
+        self.assertEqual(obj.name, "MyGreatFunction")
 
     def test_taskify_name_defaults_to_function_name(self):
         """If no name parameter is passed to the taskify decorator the name
         of the Taskify object default to the "module.function" string.
         """
+
         def my_function():
             pass
 
         obj = taskify(my_function)
         self.assertIsInstance(obj, Taskify)
-        self.assertEqual(obj.name, 'tests.test_task.my_function')
+        self.assertEqual(obj.name, "tests.test_task.my_function")
 
     def test_can_use_taskify_as_decorator_without_parenthesis(self):
         """The @taskify decorator can be applied without parenthesis."""
@@ -45,7 +46,6 @@ class TaskifyDecoratorTestCase(TestCase):
 
 
 class TaskifyApplyTestCase(TestCase):
-
     def test_taskify_apply_simple_function(self):
         """A simple (no parameters) taskified function can be called with apply()."""
         self.assertEqual(fixtures.task_return_42.apply(), 42)
@@ -61,7 +61,6 @@ class TaskifyApplyTestCase(TestCase):
 
 
 class TaskifyApplyAsyncTestCase(TransactionTestCase):
-
     def test_taskify_apply_async_simple_function(self):
         """A task can be created from a simple (no parameters) taskified
         function with apply_async().
@@ -69,8 +68,8 @@ class TaskifyApplyAsyncTestCase(TransactionTestCase):
         fixtures.task_return_42.apply_async()
 
         task = Task.objects.first()
-        self.assertEqual(task.function_name, 'tests.fixtures.task_return_42')
-        self.assertEqual(task.function_args, '{}')
+        self.assertEqual(task.function_name, "tests.fixtures.task_return_42")
+        self.assertEqual(task.function_args, "{}")
 
     def test_taskify_apply_with_positional_args(self):
         """A task can be created from a taskified function with positional args
@@ -79,7 +78,7 @@ class TaskifyApplyAsyncTestCase(TransactionTestCase):
         fixtures.task_add.apply_async(args=[4, 6])
 
         task = Task.objects.first()
-        self.assertEqual(task.function_name, 'tests.fixtures.task_add')
+        self.assertEqual(task.function_name, "tests.fixtures.task_add")
         self.assertEqual(task.function_args, '{"__positional_args__": [4, 6]}')
 
     def test_taskify_apply_with_kwargs(self):
@@ -88,7 +87,7 @@ class TaskifyApplyAsyncTestCase(TransactionTestCase):
         fixtures.task_divide.apply_async(kwargs={"b": 5, "a": 0})
 
         task = Task.objects.first()
-        self.assertEqual(task.function_name, 'tests.fixtures.task_divide')
+        self.assertEqual(task.function_name, "tests.fixtures.task_divide")
         self.assertEqual(task.function_args, '{"b": 5, "a": 0}')
 
     def test_taskify_apply_async_due_at_default_to_now(self):
@@ -105,7 +104,9 @@ class TaskifyApplyAsyncTestCase(TransactionTestCase):
 
     def test_taskify_apply_async_due_at(self):
         """A task created with apply_async() uses its due_at parameter."""
-        due_at = datetime.datetime(year=2032, month=6, day=13, hour=14, minute=7, tzinfo=timezone.utc)
+        due_at = datetime.datetime(
+            year=2032, month=6, day=13, hour=14, minute=7, tzinfo=timezone.utc
+        )
         fixtures.do_nothing.apply_async(due_at=due_at)
 
         task = Task.objects.first()
