@@ -5,7 +5,7 @@ from time import sleep
 
 import timeout_decorator
 from django.conf import settings
-from django.db import transaction
+from django.db import transaction, DatabaseError
 from django.db.models import Q
 from django.utils import timezone
 from django_pglocks import advisory_lock
@@ -89,7 +89,6 @@ class Consumer:
 
         self._scheduler.update_all_tasks_due_dates()
 
-    @transaction.atomic
     def execute_tasks(self):
         due_tasks = self.fetch_due_tasks()
 
@@ -103,11 +102,19 @@ class Consumer:
     def fetch_due_tasks(self):
         # Multiple instances of taskq rely on select_for_update().
         # This mechanism will lock selected rows until the end of the transaction.
-        due_tasks = Task.objects.filter(
-            Q(status=Task.STATUS_QUEUED),
-            due_at__lte=timezone.now()
-        ).select_for_update(skip_locked=True)
 
+        def fetched(task):
+            task.status = Task.STATUS_FETCHED
+            return task
+
+        with transaction.atomic():
+            due_tasks = [
+                fetched(task)
+                for task in Task.objects.filter(
+                    Q(status=Task.STATUS_QUEUED), due_at__lte=timezone.now()
+                ).select_for_update(skip_locked=True)
+            ]
+            Task.objects.bulk_update(due_tasks, fields=["status"])
         return due_tasks
 
     def process_tasks(self, due_tasks):
@@ -127,8 +134,6 @@ class Consumer:
             logger.info("%s : Started", task)
         else:
             nth = ordinal(task.retries)
-        task.status = Task.STATUS_RUNNING
-        task.save()
             logger.info("%s : Started (%s retry)", task, nth)
 
         def _execute_task():
@@ -136,35 +141,41 @@ class Consumer:
             self.execute_task(function, args, kwargs)
 
         try:
-            if timeout.total_seconds():
-                assert threading.current_thread() is threading.main_thread()
-                timeout_decorator.timeout(
-                    seconds=timeout.total_seconds(), use_signals=True
-                )(_execute_task)()
-            else:
-                _execute_task()
-
-        except TaskFatalError as e:
-            logger.info("%s : Fatal error", task)
-            self.fail_task(task, e)
-        except Cancel:
-            logger.info("%s : Canceled", task)
-            task.status = Task.STATUS_CANCELED
-        except timeout_decorator.TimeoutError as e:
-            logger.info("%s : Timed out", task)
-            self.fail_task(task, e)
-        except Exception as e:
-            if task.retries < task.max_retries:
-                logger.info("%s : Failed, will retry", task)
-                self.retry_task_later(task)
-            else:
-                logger.info("%s : Failed, exceeded max retries", task)
-                self.fail_task(task, e)
-        else:
-            logger.info("%s : Success", task)
-            task.status = Task.STATUS_SUCCESS
-        finally:
+            task.status = Task.STATUS_RUNNING
             task.save()
+
+            try:
+                if timeout.total_seconds():
+                    assert threading.current_thread() is threading.main_thread()
+                    timeout_decorator.timeout(
+                        seconds=timeout.total_seconds(), use_signals=True
+                    )(_execute_task)()
+                else:
+                    _execute_task()
+
+            except TaskFatalError as e:
+                logger.info("%s : Fatal error", task)
+                self.fail_task(task, e)
+            except Cancel:
+                logger.info("%s : Canceled", task)
+                task.status = Task.STATUS_CANCELED
+            except timeout_decorator.TimeoutError as e:
+                logger.info("%s : Timed out", task)
+                self.fail_task(task, e)
+            except Exception as e:
+                if task.retries < task.max_retries:
+                    logger.info("%s : Failed, will retry", task)
+                    self.retry_task_later(task)
+                else:
+                    logger.info("%s : Failed, exceeded max retries", task)
+                    self.fail_task(task, e)
+            else:
+                logger.info("%s : Success", task)
+                task.status = Task.STATUS_SUCCESS
+            finally:
+                task.save()
+        except DatabaseError:
+            logger.error("%s : DB error, couldn't update task status", task)
 
     def retry_task_later(self, task):
         task.status = Task.STATUS_QUEUED

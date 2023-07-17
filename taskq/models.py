@@ -19,6 +19,7 @@ class Task(models.Model):
     STATUS_SUCCESS = 2  # Task succeeded
     STATUS_FAILED = 3  # Task has failed
     STATUS_CANCELED = 4  # Task was revoked.
+    STATUS_FETCHED = 5  # Task was fetched
 
     STATUS_CHOICES = (
         (STATUS_QUEUED, "Queued"),
@@ -26,6 +27,7 @@ class Task(models.Model):
         (STATUS_SUCCESS, "Success"),
         (STATUS_FAILED, "Failed"),
         (STATUS_CANCELED, "Canceled"),
+        (STATUS_FETCHED, "Fetched"),
     )
 
     uuid = models.CharField(

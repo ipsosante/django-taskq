@@ -1,5 +1,8 @@
 from datetime import timedelta
+from unittest.mock import patch, Mock
 
+from django.db import OperationalError
+from django.db.models import Model
 from django.test import TransactionTestCase, override_settings
 from django.utils.timezone import now
 
@@ -114,6 +117,42 @@ class ConsumerTestCase(TransactionTestCase):
 
         task.refresh_from_db()
         self.assertEqual(task.status, Task.STATUS_FAILED)
+
+    def test_consumer_db_error(self):
+        task_count = 3
+        assert Task.objects.count() == 0
+
+        tasks = [create_task() for _ in range(task_count)]
+
+        with self.assertLogs("taskq", level="ERROR") as taskq_error_logger_check:
+
+            with patch.object(Task, "save", autospec=True) as mock_task_save:
+                running_tasks = set()
+                error_task = None
+
+                def raise_if_last_running_task(self):
+                    nonlocal error_task
+                    print(f"MOCK SAVE {self.uuid} {self.get_status_display()}")
+                    if self.status == Task.STATUS_RUNNING:
+                        running_tasks.add(self.uuid)
+                        if len(running_tasks) == len(tasks):
+                            print(
+                                f"!!! DB ERROR !!! {self.uuid} {self.get_status_display()}"
+                            )
+                            error_task = self
+                            raise OperationalError()
+                    return Model.save(self)
+
+                mock_task_save.side_effect = raise_if_last_running_task
+
+                consumer = Consumer()
+                consumer.execute_tasks()
+
+            assert Task.objects.filter(status=Task.STATUS_SUCCESS).count() == 2
+            assert Task.objects.filter(status=Task.STATUS_FETCHED).count() == 1
+            log_output = "\n".join(taskq_error_logger_check.output)
+            assert "DB error" in log_output
+            assert error_task.uuid in log_output
 
     def test_consumer_logs_cleaned_backtrace(self):
         """Consumer will log catched exceptions with internal frames removed
