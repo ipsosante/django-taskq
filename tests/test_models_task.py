@@ -1,12 +1,14 @@
 import datetime
 
-from django.test import TransactionTestCase
-from django.utils.timezone import now
-from django.db.utils import IntegrityError
 from django.core.exceptions import ValidationError
+from django.db.utils import IntegrityError
+from django.test import TestCase, TransactionTestCase
 from django.utils import timezone
+from django.utils.timezone import now
 
+from taskq.consumer import Consumer
 from taskq.models import Task
+from tests.utils import create_task
 
 
 class TaskTestCase(TransactionTestCase):
@@ -161,6 +163,19 @@ class TaskTestCase(TransactionTestCase):
             self.assertGreaterEqual(task.due_at, before + delta)
             self.assertLessEqual(task.due_at, after + delta)
 
+    def test_task_function_args_cannot_modified_by_task_function(self):
+        original_args = {"__positional_args__": ["a"], "context": {"foo": "bar"}}
+        task = create_task(
+            function_name="tests.fixtures.task_update_context",
+            function_args=original_args,
+        )
+        consumer = Consumer()
+        consumer.process_task(task)
+        task.refresh_from_db()
+        assert task.function_args == original_args
+
+
+class TaskFunctionArgsTestCase(TestCase):
     def test_tasks_arguments_encoding_args(self):
         """The function positional args are properly encoded when using encode_function_args()."""
         task = Task()
@@ -169,7 +184,7 @@ class TaskTestCase(TransactionTestCase):
         task.encode_function_args(["a", 1, "foo", True])
         task.save()
 
-        expected = '{"__positional_args__": ["a", 1, "foo", true]}'
+        expected = {"__positional_args__": ["a", 1, "foo", True]}
         self.assertEqual(task.function_args, expected)
 
     def test_tasks_arguments_encoding_kwargs(self):
@@ -180,7 +195,7 @@ class TaskTestCase(TransactionTestCase):
         task.encode_function_args(kwargs={"cheese": "blue", "fruits_count": 8})
         task.save()
 
-        expected = '{"cheese": "blue", "fruits_count": 8}'
+        expected = {"cheese": "blue", "fruits_count": 8}
         self.assertEqual(task.function_args, expected)
 
     def test_tasks_arguments_encoding_mixed_args(self):
@@ -191,7 +206,11 @@ class TaskTestCase(TransactionTestCase):
         task.encode_function_args(["a", "b", 42], {"cheese": "blue", "fruits_count": 2})
         task.save()
 
-        expected = '{"cheese": "blue", "fruits_count": 2, "__positional_args__": ["a", "b", 42]}'
+        expected = {
+            "cheese": "blue",
+            "fruits_count": 2,
+            "__positional_args__": ["a", "b", 42],
+        }
         self.assertEqual(task.function_args, expected)
 
     def test_tasks_arguments_decoding_args(self):
@@ -199,7 +218,7 @@ class TaskTestCase(TransactionTestCase):
         task = Task()
         task.due_at = now()
         task.function_name = "tests.fixtures.do_nothing"
-        task.function_args = '{"__positional_args__": [4, true, "banana"]}'
+        task.function_args = {"__positional_args__": [4, True, "banana"]}
         task.save()
 
         expected = ([4, True, "banana"], {})
@@ -210,7 +229,7 @@ class TaskTestCase(TransactionTestCase):
         task = Task()
         task.due_at = now()
         task.function_name = "tests.fixtures.do_nothing"
-        task.function_args = '{"cheese": "blue", "fruits_count": 8}'
+        task.function_args = {"cheese": "blue", "fruits_count": 8}
         task.save()
 
         expected = ([], {"cheese": "blue", "fruits_count": 8})
@@ -221,7 +240,11 @@ class TaskTestCase(TransactionTestCase):
         task = Task()
         task.due_at = now()
         task.function_name = "tests.fixtures.do_nothing"
-        task.function_args = '{"cheese": "blue", "fruits_count": 8, "__positional_args__": [7, "orange"]}'
+        task.function_args = {
+            "cheese": "blue",
+            "fruits_count": 8,
+            "__positional_args__": [7, "orange"],
+        }
         task.save()
 
         expected = ([7, "orange"], {"cheese": "blue", "fruits_count": 8})

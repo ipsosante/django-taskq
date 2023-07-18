@@ -52,6 +52,15 @@ def task_divide(a, b=1):
 
 
 @taskify
+def task_update_context(a, context):
+    class TestObject:
+        pass
+
+    context["obj"] = TestObject()
+    return a
+
+
+@taskify
 def failing_alphabet():
     a()
 

@@ -52,7 +52,7 @@ class UtilsTaskFromScheduledTaskTestCase(TransactionTestCase):
         self.assertIsNotNone(task)
         self.assertEqual(task.name, "Cooking pie")
         self.assertEqual(task.function_name, "kitchen.chef.cook_pie")
-        self.assertEqual(task.function_args, '{"flour": 300, "pumpkin": true}')
+        self.assertEqual(task.function_args, {"flour": 300, "pumpkin": True})
         self.assertEqual(task.max_retries, 1)
         self.assertEqual(task.retry_delay, datetime.timedelta(seconds=22))
         self.assertEqual(task.retry_backoff, True)

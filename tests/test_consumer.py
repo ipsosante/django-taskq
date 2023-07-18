@@ -7,9 +7,8 @@ from django.test import TransactionTestCase, override_settings
 from django.utils.timezone import now
 
 from taskq.consumer import Consumer
-from taskq.models import Task
 from taskq.exceptions import TaskLoadingError
-
+from taskq.models import Task
 from .utils import create_task, create_background_consumers
 
 
@@ -29,7 +28,11 @@ class ConsumerTestCase(TransactionTestCase):
     def test_consumer_run_due_task(self):
         """Consumer will run task at or after their due date."""
         due_at = now() - timedelta(milliseconds=100)
-        task = create_task(due_at=due_at)
+        task = create_task(
+            function_name="tests.fixtures.task_add",
+            due_at=due_at,
+            function_args={"a": 1, "b": 2},
+        )
 
         consumer = Consumer()
         consumer.execute_tasks()

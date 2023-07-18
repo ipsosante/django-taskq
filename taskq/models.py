@@ -1,5 +1,5 @@
+import copy
 import datetime
-import json
 import uuid
 
 from django.core.exceptions import ValidationError
@@ -39,7 +39,10 @@ class Task(models.Model):
     function_name = models.CharField(
         max_length=255, null=False, blank=False, default=None
     )
-    function_args = models.TextField(null=False, blank=True, default="")
+    function_args = models.JSONField(
+        null=False, default=dict, encoder=JSONEncoder, decoder=JSONDecoder
+    )
+
     due_at = models.DateTimeField(null=False, db_index=True)
     status = models.IntegerField(
         choices=STATUS_CHOICES, default=STATUS_QUEUED, db_index=True
@@ -60,18 +63,27 @@ class Task(models.Model):
 
         super().save(*args, **kwargs)
 
-    def encode_function_args(self, args=None, kwargs=None):
-        if not kwargs:
-            kwargs = {}
+    @staticmethod
+    def _function_args_and_kwargs_to_dict(args=None, kwargs=None):
+        args_dict = {}
+        if kwargs:
+            args_dict.update(copy.deepcopy(kwargs))
         if args:
-            kwargs["__positional_args__"] = args
-        self.function_args = json.dumps(kwargs, cls=JSONEncoder)
+            args_dict["__positional_args__"] = copy.deepcopy(args)
+        return args_dict
+
+    @staticmethod
+    def _dict_to_function_args_and_kwargs(args_dict):
+        args_dict = copy.deepcopy(args_dict)
+        args = args_dict.pop("__positional_args__", [])
+        kwargs = args_dict
+        return args, kwargs
+
+    def encode_function_args(self, args=None, kwargs=None):
+        self.function_args = self._function_args_and_kwargs_to_dict(args, kwargs)
 
     def decode_function_args(self):
-        kwargs = json.loads(self.function_args, cls=JSONDecoder)
-        args = kwargs.pop("__positional_args__", [])
-
-        return (args, kwargs)
+        return self._dict_to_function_args_and_kwargs(self.function_args)
 
     def update_due_at_after_failure(self):
         """Update its due_at date taking into account the number of retries and

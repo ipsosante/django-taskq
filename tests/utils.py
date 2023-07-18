@@ -1,5 +1,5 @@
-from functools import partial
 import threading
+from functools import partial
 
 from django.db import connections
 from django.utils.timezone import now
@@ -13,7 +13,7 @@ def create_task(**kwargs):
     task = Task()
     default_function_name = "tests.fixtures.do_nothing"
     task.function_name = kwargs.get("function_name", default_function_name)
-    task.function_args = kwargs.get("function_args", "{}")
+    task.function_args = kwargs.get("function_args", {})
     task.due_at = kwargs.get("due_at", now())
 
     if "name" in kwargs:

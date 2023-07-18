@@ -69,7 +69,7 @@ class TaskifyApplyAsyncTestCase(TransactionTestCase):
 
         task = Task.objects.first()
         self.assertEqual(task.function_name, "tests.fixtures.task_return_42")
-        self.assertEqual(task.function_args, "{}")
+        self.assertEqual(task.function_args, {})
 
     def test_taskify_apply_with_positional_args(self):
         """A task can be created from a taskified function with positional args
@@ -79,7 +79,7 @@ class TaskifyApplyAsyncTestCase(TransactionTestCase):
 
         task = Task.objects.first()
         self.assertEqual(task.function_name, "tests.fixtures.task_add")
-        self.assertEqual(task.function_args, '{"__positional_args__": [4, 6]}')
+        self.assertEqual(task.function_args, {"__positional_args__": [4, 6]})
 
     def test_taskify_apply_with_kwargs(self):
         """A task can be created from a taskified function with kwargs with
@@ -88,7 +88,7 @@ class TaskifyApplyAsyncTestCase(TransactionTestCase):
 
         task = Task.objects.first()
         self.assertEqual(task.function_name, "tests.fixtures.task_divide")
-        self.assertEqual(task.function_args, '{"b": 5, "a": 0}')
+        self.assertEqual(task.function_args, {"b": 5, "a": 0})
 
     def test_taskify_apply_async_due_at_default_to_now(self):
         """A task created with apply_async() without an explicit due_at as its
