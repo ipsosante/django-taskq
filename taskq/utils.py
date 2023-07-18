@@ -1,15 +1,17 @@
 import datetime
-import math
 import traceback
 
 from .models import Task
 
 
-def ordinal(n):
+def ordinal(n: int):
     """Output the ordinal representation ("1st", "2nd", "3rd", etc.) of any number."""
     # https://stackoverflow.com/a/20007730/404321
-    suffix = "tsnrhtdd"[(math.floor(n / 10) % 10 != 1) * (n % 10 < 4) * n % 10 :: 4]
-    return f"{n}{suffix}"
+    if 11 <= (n % 100) <= 13:
+        suffix = "th"
+    else:
+        suffix = ["th", "st", "nd", "rd", "th"][min(n % 10, 4)]
+    return str(n) + suffix
 
 
 def parse_timedelta(delay, nullable=False):

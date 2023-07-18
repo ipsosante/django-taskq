@@ -1,5 +1,5 @@
 from datetime import timedelta
-from unittest.mock import patch, Mock
+from unittest.mock import patch
 
 from django.db import OperationalError
 from django.db.models import Model
