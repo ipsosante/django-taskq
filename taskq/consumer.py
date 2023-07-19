@@ -115,7 +115,23 @@ class Consumer:
                 ).select_for_update(skip_locked=True)
             ]
             Task.objects.bulk_update(due_tasks, fields=["status"])
+
+        self._log_fetched_tasks_count(len(due_tasks))
+
         return due_tasks
+
+    @staticmethod
+    def _log_fetched_tasks_count(task_count):
+        logger.info(f"{task_count} tasks fetched")
+
+        log_threshold = getattr(
+            settings, "TASKQ_FETCHED_TASKS_COUNT_LOGGED_AS_ERROR_THRESHOLD", None
+        )
+        if log_threshold and task_count >= log_threshold:
+            logger.error(
+                f"more than {log_threshold} tasks fetched",
+                extra={"task count": task_count},
+            )
 
     def process_tasks(self, due_tasks):
         for due_task in due_tasks:

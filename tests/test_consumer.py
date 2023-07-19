@@ -1,4 +1,5 @@
 from datetime import timedelta
+from logging import ERROR
 from unittest.mock import patch
 
 from django.db import OperationalError
@@ -184,6 +185,24 @@ class ConsumerTestCase(TransactionTestCase):
         expected_functions = ["_protected_call", "failing_alphabet", "a", "b", "c", "d"]
         for i, expected_function in enumerate(expected_functions):
             self.assertIn(expected_function, relevant_lines[i])
+
+    @override_settings(TASKQ_FETCHED_TASKS_COUNT_LOGGED_AS_ERROR_THRESHOLD=4)
+    def test_consumer_taskq_fetched_tasks_count_logging_threshold(self):
+        consumer = Consumer()
+        for i in range(3):
+            create_task()
+
+        with self.assertRaises(AssertionError):
+            with self.assertLogs("taskq", ERROR):
+                consumer.execute_tasks()
+
+        for i in range(4):
+            create_task()
+
+        with self.assertLogs("taskq", ERROR) as log_check:
+            consumer.execute_tasks()
+            assert log_check.output
+            assert "more than 4 tasks fetched" in "\n".join(log_check.output)
 
     @override_settings(
         TASKQ={
