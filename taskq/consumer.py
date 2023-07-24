@@ -103,17 +103,15 @@ class Consumer:
         # Multiple instances of taskq rely on select_for_update().
         # This mechanism will lock selected rows until the end of the transaction.
 
-        def fetched(task):
-            task.status = Task.STATUS_FETCHED
-            return task
-
         with transaction.atomic():
-            due_tasks = [
-                fetched(task)
-                for task in Task.objects.filter(
-                    Q(status=Task.STATUS_QUEUED), due_at__lte=timezone.now()
-                ).select_for_update(skip_locked=True)
-            ]
+            due_tasks_qs = Task.objects.filter(
+                Q(status=Task.STATUS_QUEUED), due_at__lte=timezone.now()
+            ).select_for_update(skip_locked=True)
+
+            due_tasks = list(due_tasks_qs)
+            for task in due_tasks:
+                task.status = Task.STATUS_FETCHED
+
             Task.objects.bulk_update(due_tasks, fields=["status"])
 
         self._log_fetched_tasks_count(len(due_tasks))
