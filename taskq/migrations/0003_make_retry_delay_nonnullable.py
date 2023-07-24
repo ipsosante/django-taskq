@@ -8,14 +8,12 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
 
-    dependencies = [
-        ('taskq', '0002_add_retry_delay'),
-    ]
+    dependencies = [("taskq", "0002_add_retry_delay")]
 
     operations = [
         migrations.AlterField(
-            model_name='task',
-            name='retry_delay',
+            model_name="task",
+            name="retry_delay",
             field=models.DurationField(default=datetime.timedelta(0)),
-        ),
+        )
     ]

@@ -27,7 +27,7 @@ def self_cancelling():
 
 @taskify
 def failing():
-    raise ValueError('Task is failing')
+    raise ValueError("Task is failing")
 
 
 @taskify
@@ -49,6 +49,15 @@ def task_add(a, b):
 @taskify
 def task_divide(a, b=1):
     return a / b
+
+
+@taskify
+def task_update_context(a, context):
+    class TestObject:
+        pass
+
+    context["obj"] = TestObject()
+    return a
 
 
 @taskify

@@ -36,11 +36,11 @@ Setup the PostgreSQL database:
     brew install postgresql@10
     initdb /path/to/database/storage  # For example /usr/local/var/postgres
 
-    # Start PostgreSQL on port 5433
-    pg_ctl -D /path/to/database/storage -o "-p 5433" start
+    # Start PostgreSQL on port 5432
+    pg_ctl -D /path/to/database/storage -o "-p 5432" start
 
     # Create a postgres user allowed to create our test database
-    psql -p 5433 -d postgres -c "CREATE USER postgres WITH PASSWORD 'IN0vRycvrF' CREATEDB"
+    psql -p 5432 -d postgres -c "CREATE USER postgres WITH PASSWORD 'IN0vRycvrF' CREATEDB"
 
 Set your PYTHONPATH to the developement directory:
 

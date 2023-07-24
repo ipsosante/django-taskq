@@ -8,28 +8,37 @@ import taskq.models
 
 class Migration(migrations.Migration):
 
-    dependencies = [
-        ('taskq', '0004_modify_max_retries_default'),
-    ]
+    dependencies = [("taskq", "0004_modify_max_retries_default")]
 
     operations = [
         migrations.AlterField(
-            model_name='task',
-            name='status',
-            field=models.IntegerField(choices=[(0, 'Queued'), (1, 'Running'), (2, 'Success'), (3, 'Failed'), (4, 'Canceled')], default=0),
+            model_name="task",
+            name="status",
+            field=models.IntegerField(
+                choices=[
+                    (0, "Queued"),
+                    (1, "Running"),
+                    (2, "Success"),
+                    (3, "Failed"),
+                    (4, "Canceled"),
+                ],
+                default=0,
+            ),
         ),
         migrations.AlterField(
-            model_name='task',
-            name='uuid',
-            field=models.CharField(default=taskq.models.generate_task_uuid, editable=False, max_length=36, unique=True),
+            model_name="task",
+            name="uuid",
+            field=models.CharField(
+                default=taskq.models.generate_task_uuid,
+                editable=False,
+                max_length=36,
+                unique=True,
+            ),
         ),
         migrations.AlterField(
-            model_name='task',
-            name='function_name',
+            model_name="task",
+            name="function_name",
             field=models.CharField(default=None, max_length=255),
         ),
-        migrations.AlterModelTable(
-            name='task',
-            table=None,
-        ),
+        migrations.AlterModelTable(name="task", table=None),
     ]

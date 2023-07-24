@@ -1,5 +1,5 @@
-from functools import partial
 import threading
+from functools import partial
 
 from django.db import connections
 from django.utils.timezone import now
@@ -11,34 +11,36 @@ from taskq.utils import parse_timedelta
 
 def create_task(**kwargs):
     task = Task()
-    default_function_name = 'tests.fixtures.do_nothing'
-    task.function_name = kwargs.get('function_name', default_function_name)
-    task.function_args = kwargs.get('function_args', '{}')
-    task.due_at = kwargs.get('due_at', now())
+    default_function_name = "tests.fixtures.do_nothing"
+    task.function_name = kwargs.get("function_name", default_function_name)
+    task.function_args = kwargs.get("function_args", {})
+    task.due_at = kwargs.get("due_at", now())
 
-    if 'name' in kwargs:
-        task.name = kwargs['name']
-    if 'status' in kwargs:
-        task.status = kwargs['status']
-    if 'retries' in kwargs:
-        task.retries = kwargs['retries']
-    if 'max_retries' in kwargs:
-        task.max_retries = kwargs['max_retries']
-    if 'retry_delay' in kwargs:
-        task.retry_delay = parse_timedelta(kwargs['retry_delay'])
-    if 'retry_backoff' in kwargs:
-        task.retry_backoff = kwargs['retry_backoff']
-    if 'retry_backoff_factor' in kwargs:
-        task.retry_backoff_factor = kwargs['retry_backoff_factor']
-    if 'timeout' in kwargs:
-        task.timeout = parse_timedelta(kwargs['timeout'], nullable=True)
+    if "name" in kwargs:
+        task.name = kwargs["name"]
+    if "status" in kwargs:
+        task.status = kwargs["status"]
+    if "retries" in kwargs:
+        task.retries = kwargs["retries"]
+    if "max_retries" in kwargs:
+        task.max_retries = kwargs["max_retries"]
+    if "retry_delay" in kwargs:
+        task.retry_delay = parse_timedelta(kwargs["retry_delay"])
+    if "retry_backoff" in kwargs:
+        task.retry_backoff = kwargs["retry_backoff"]
+    if "retry_backoff_factor" in kwargs:
+        task.retry_backoff_factor = kwargs["retry_backoff_factor"]
+    if "timeout" in kwargs:
+        task.timeout = parse_timedelta(kwargs["timeout"], nullable=True)
 
     task.save()
 
     return task
 
 
-def create_background_consumers(count, before_start=None, target='run', *args, **kwargs):
+def create_background_consumers(
+    count, before_start=None, target="run", *args, **kwargs
+):
     """Create new Consumer instances on background threads, starts them, and
     return a tuple ([consumer], [thread]).
 

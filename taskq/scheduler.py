@@ -8,10 +8,18 @@ from .utils import parse_timedelta
 
 
 class ScheduledTask:
-
-    def __init__(self, name, task, cron, args=None, max_retries=3,
-                 retry_delay=0, retry_backoff=False, retry_backoff_factor=2,
-                 timeout=None):
+    def __init__(
+        self,
+        name,
+        task,
+        cron,
+        args=None,
+        max_retries=3,
+        retry_delay=0,
+        retry_backoff=False,
+        retry_backoff_factor=2,
+        timeout=None,
+    ):
         self.name = name
         self.task = task  # The function to be executed
         self.args = args if args else {}
@@ -44,8 +52,8 @@ class ScheduledTask:
 
 class Scheduler:
     def __init__(self):
-        taskq_config = getattr(settings, 'TASKQ', {})
-        schedule = taskq_config.get('schedule', {})
+        taskq_config = getattr(settings, "TASKQ", {})
+        schedule = taskq_config.get("schedule", {})
 
         self._tasks = []
 

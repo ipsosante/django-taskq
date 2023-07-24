@@ -5,7 +5,7 @@ from django.utils import timezone
 from .models import Task as TaskModel
 from .utils import parse_timedelta
 
-logger = logging.getLogger('taskq')
+logger = logging.getLogger("taskq")
 
 
 class Taskify:
@@ -20,9 +20,17 @@ class Taskify:
     def apply(self, *args, **kwargs):
         return self._function(*args, **kwargs)
 
-    def apply_async(self, due_at=None, max_retries=3, retry_delay=0,
-                    retry_backoff=False, retry_backoff_factor=2, timeout=None,
-                    args=None, kwargs=None):
+    def apply_async(
+        self,
+        due_at=None,
+        max_retries=3,
+        retry_delay=0,
+        retry_backoff=False,
+        retry_backoff_factor=2,
+        timeout=None,
+        args=None,
+        kwargs=None,
+    ):
         """Apply a task asynchronously.
 .
         :param Tuple args: The positional arguments to pass on to the task.
@@ -62,7 +70,7 @@ class Taskify:
 
     @property
     def func_name(self):
-        return '%s.%s' % (self._function.__module__, self._function.__name__)
+        return "%s.%s" % (self._function.__module__, self._function.__name__)
 
     @property
     def name(self):
