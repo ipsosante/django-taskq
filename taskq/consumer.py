@@ -37,6 +37,7 @@ class Consumer:
         super().__init__()
         self._should_stop = threading.Event()
         self._scheduler = Scheduler()
+        self._fetched_tasks_count_above_error_threshold_counter = 0
 
         # Test parameters
         self._sleep_rate = sleep_rate
@@ -118,18 +119,33 @@ class Consumer:
 
         return due_tasks
 
-    @staticmethod
-    def _log_fetched_tasks_count(task_count):
-        logger.info(f"{task_count} tasks fetched")
+    def _log_fetched_tasks_count(self, task_count):
+        if task_count:
+            logger.info(f"{task_count} tasks fetched")
 
         log_threshold = getattr(
             settings, "TASKQ_FETCHED_TASKS_COUNT_LOGGED_AS_ERROR_THRESHOLD", None
         )
         if log_threshold and task_count >= log_threshold:
-            logger.error(
-                f"more than {log_threshold} tasks fetched",
-                extra={"task count": task_count},
+            self._fetched_tasks_count_above_error_threshold_counter += 1
+            counter_trigger = getattr(
+                settings,
+                "TASKQ_FETCHED_TASKS_COUNT_ABOVE_ERROR_THRESHOLD_COUNTER_TRIGGER",
+                1,
             )
+            if (
+                self._fetched_tasks_count_above_error_threshold_counter
+                >= counter_trigger
+            ):
+                logger.error(
+                    f"more than {log_threshold} tasks fetched",
+                    extra={
+                        "task count": task_count,
+                        "task count above threshold counter": self._fetched_tasks_count_above_error_threshold_counter,
+                    },
+                )
+        else:
+            self._fetched_tasks_count_above_error_threshold_counter = 0
 
     def process_tasks(self, due_tasks):
         for due_task in due_tasks:

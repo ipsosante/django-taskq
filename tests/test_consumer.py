@@ -205,6 +205,71 @@ class ConsumerTestCase(TransactionTestCase):
             assert "more than 4 tasks fetched" in "\n".join(log_check.output)
 
     @override_settings(
+        TASKQ_FETCHED_TASKS_COUNT_LOGGED_AS_ERROR_THRESHOLD=3,
+        TASKQ_FETCHED_TASKS_COUNT_ABOVE_ERROR_THRESHOLD_COUNTER_TRIGGER=3,
+    )
+    def test_consumer_taskq_fetched_tasks_count_logging_threshold_counter_trigger(self):
+        consumer = Consumer()
+        for i in range(3):
+            create_task()
+
+        with self.assertRaises(AssertionError):
+            with self.assertLogs("taskq", ERROR):
+                consumer.execute_tasks()
+
+        for i in range(3):
+            create_task()
+
+        with self.assertRaises(AssertionError):
+            with self.assertLogs("taskq", ERROR):
+                consumer.execute_tasks()
+
+        for i in range(3):
+            create_task()
+
+        with self.assertLogs("taskq", ERROR) as log_check:
+            consumer.execute_tasks()
+            assert log_check.output
+            assert "more than 3 tasks fetched" in "\n".join(log_check.output)
+
+    @override_settings(
+        TASKQ_FETCHED_TASKS_COUNT_LOGGED_AS_ERROR_THRESHOLD=3,
+        TASKQ_FETCHED_TASKS_COUNT_ABOVE_ERROR_THRESHOLD_COUNTER_TRIGGER=3,
+    )
+    def test_consumer_taskq_fetched_tasks_count_logging_threshold_counter_reset(self):
+        consumer = Consumer()
+        for i in range(3):
+            create_task()
+
+        with self.assertRaises(AssertionError):
+            with self.assertLogs("taskq", ERROR):
+                consumer.execute_tasks()
+
+        for i in range(3):
+            create_task()
+
+        with self.assertRaises(AssertionError):
+            with self.assertLogs("taskq", ERROR):
+                consumer.execute_tasks()
+
+        for i in range(2):
+            create_task()
+
+        with self.assertRaises(AssertionError):
+            with self.assertLogs("taskq", ERROR):
+                consumer.execute_tasks()
+
+        # counter is reset
+        assert consumer._fetched_tasks_count_above_error_threshold_counter == 0
+
+        for i in range(3):
+            create_task()
+
+        with self.assertRaises(AssertionError):
+            with self.assertLogs("taskq", ERROR):
+                consumer.execute_tasks()
+
+    @override_settings(
         TASKQ={
             "schedule": {
                 "my-scheduled-task": {
