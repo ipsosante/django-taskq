@@ -14,8 +14,8 @@ setup(
     zip_safe=False,
     install_requires=[
         "django == 3.2.*",
-        "croniter >= 0.3, <=0.4",
-        "django-pglocks==1.0.4",
-        "timeout-decorator==0.4.1",
+        "croniter >= 1.4.1",
+        "django-pglocks >= 1.0.4",
+        "timeout-decorator >= 0.5.0",
     ],
 )
