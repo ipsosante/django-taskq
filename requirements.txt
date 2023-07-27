@@ -2,4 +2,3 @@ django==3.2.*
 croniter>=0.3, <=0.4
 timeout-decorator==0.4.1
 django-pglocks==1.0.4
-progressbar2==4.2.0
