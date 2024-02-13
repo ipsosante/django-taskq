@@ -32,18 +32,18 @@ class Taskify:
         kwargs=None,
     ):
         """Apply a task asynchronously.
-.
-        :param Tuple args: The positional arguments to pass on to the task.
+        .
+                :param Tuple args: The positional arguments to pass on to the task.
 
-        :parm Dict kwargs: The keyword arguments to pass on to the task.
+                :parm Dict kwargs: The keyword arguments to pass on to the task.
 
-        :parm due_at: When the task should be executed. (None = now).
-        :type due_at: timedelta or None
+                :parm due_at: When the task should be executed. (None = now).
+                :type due_at: timedelta or None
 
-        :param timeout: The maximum time a task may run.
-                        (None = no timeout)
-                        (int = number of seconds)
-        :type timeout: timedelta or int or None
+                :param timeout: The maximum time a task may run.
+                                (None = no timeout)
+                                (int = number of seconds)
+                :type timeout: timedelta or int or None
         """
 
         if due_at is None:

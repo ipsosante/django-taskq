@@ -7,7 +7,6 @@ import taskq.models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [("taskq", "0004_modify_max_retries_default")]
 
     operations = [

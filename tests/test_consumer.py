@@ -129,7 +129,6 @@ class ConsumerTestCase(TransactionTestCase):
         tasks = [create_task() for _ in range(task_count)]
 
         with self.assertLogs("taskq", level="ERROR") as taskq_error_logger_check:
-
             with patch.object(Task, "save", autospec=True) as mock_task_save:
                 running_tasks = set()
                 error_task = None
@@ -280,8 +279,7 @@ class ConsumerTestCase(TransactionTestCase):
         }
     )
     def test_consumer_create_task_for_due_scheduled_task(self):
-        """Consumer creates tasks for each scheduled task defined in settings.
-        """
+        """Consumer creates tasks for each scheduled task defined in settings."""
         consumer = Consumer()
 
         # Hack the due_at date to simulate the fact that the task was run once
