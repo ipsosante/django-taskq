@@ -1,8 +1,6 @@
 import datetime
 import traceback
 
-from .models import Task
-
 
 def ordinal(n: int):
     """Output the ordinal representation ("1st", "2nd", "3rd", etc.) of any number."""
@@ -29,26 +27,6 @@ def parse_timedelta(delay, nullable=False):
         return datetime.timedelta(seconds=delay)
 
     raise TypeError("Unexpected delay type")
-
-
-def task_from_scheduled_task(scheduled_task):
-    """Create a new Task initialized with the content of `scheduled_task`.
-
-    Note that the returned Task is not saved in database, you still need to
-    call .save() on it.
-    """
-    task = Task()
-    task.name = scheduled_task.name
-    task.due_at = scheduled_task.due_at
-    task.function_name = scheduled_task.function_name
-    task.encode_function_args(kwargs=scheduled_task.args)
-    task.max_retries = scheduled_task.max_retries
-    task.retry_delay = scheduled_task.retry_delay
-    task.retry_backoff = scheduled_task.retry_backoff
-    task.retry_backoff_factor = scheduled_task.retry_backoff_factor
-    task.timeout = scheduled_task.timeout
-
-    return task
 
 
 def traceback_filter_taskq_frames(exception):

@@ -1,12 +1,18 @@
 import copy
 import datetime
+import importlib
+import logging
 import uuid
 
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
 
+from .exceptions import TaskLoadingError
 from .json import JSONDecoder, JSONEncoder
+from .utils import parse_timedelta
+
+logger = logging.getLogger("taskq")
 
 
 def generate_task_uuid():
@@ -100,6 +106,40 @@ class Task(models.Model):
 
         self.due_at = timezone.now() + delay
 
+    def load_task(self):
+        taskified_function = self.import_taskified_function(self.function_name)
+        args, kwargs = self.decode_function_args()
+
+        return (taskified_function, args, kwargs)
+
+    @staticmethod
+    def import_taskified_function(import_path):
+        """Load a @taskified function from a python module.
+
+        Returns TaskLoadingError if loading of the function failed.
+        """
+        # https://stackoverflow.com/questions/3606202
+        module_name, unit_name = import_path.rsplit(".", 1)
+        try:
+            module = importlib.import_module(module_name)
+        except (ImportError, SyntaxError) as e:
+            raise TaskLoadingError(e)
+
+        try:
+            obj = getattr(module, unit_name)
+        except AttributeError as e:
+            raise TaskLoadingError(e)
+
+        if not isinstance(obj, Taskify):
+            msg = f'Object "{import_path}" is not a task'
+            raise TaskLoadingError(msg)
+
+        return obj
+
+    def execute(self):
+        taskified_function, args, kwargs = self.load_task()
+        taskified_function._protected_call(args, kwargs)
+
     def __str__(self):
         status = dict(self.STATUS_CHOICES)[self.status]
 
@@ -109,3 +149,75 @@ class Task(models.Model):
         str_repr += f"{self.uuid}, status={status}>"
 
         return str_repr
+
+
+class Taskify:
+    def __init__(self, function, name=None):
+        self._function = function
+        self._name = name
+
+    def __call__(self, *args, **kwargs):
+        return self._function(*args, **kwargs)
+
+    # If you rename this method, update the code in utils.traceback_filter_taskq_frames
+    def _protected_call(self, args, kwargs):
+        self.__call__(*args, **kwargs)
+
+    def apply(self, *args, **kwargs):
+        return self.__call__(*args, **kwargs)
+
+    def apply_async(
+        self,
+        due_at=None,
+        max_retries=3,
+        retry_delay=0,
+        retry_backoff=False,
+        retry_backoff_factor=2,
+        timeout=None,
+        args=None,
+        kwargs=None,
+    ):
+        """Apply a task asynchronously.
+        .
+                :param Tuple args: The positional arguments to pass on to the task.
+
+                :parm Dict kwargs: The keyword arguments to pass on to the task.
+
+                :parm due_at: When the task should be executed. (None = now).
+                :type due_at: timedelta or None
+
+                :param timeout: The maximum time a task may run.
+                                (None = no timeout)
+                                (int = number of seconds)
+                :type timeout: timedelta or int or None
+        """
+
+        if due_at is None:
+            due_at = timezone.now()
+        if args is None:
+            args = []
+        if kwargs is None:
+            kwargs = {}
+
+        task = Task()
+        task.due_at = due_at
+        task.name = self.name
+        task.status = Task.STATUS_QUEUED
+        task.function_name = self.func_name
+        task.encode_function_args(args, kwargs)
+        task.max_retries = max_retries
+        task.retry_delay = parse_timedelta(retry_delay)
+        task.retry_backoff = retry_backoff
+        task.retry_backoff_factor = retry_backoff_factor
+        task.timeout = parse_timedelta(timeout, nullable=True)
+        task.save()
+
+        return task
+
+    @property
+    def func_name(self):
+        return "%s.%s" % (self._function.__module__, self._function.__name__)
+
+    @property
+    def name(self):
+        return self._name if self._name else self.func_name

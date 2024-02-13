@@ -1,7 +1,8 @@
 import threading
 
-from taskq.task import taskify
 from taskq.exceptions import Cancel
+from taskq.models import Taskify
+from taskq.task import taskify
 
 
 def naked_function():
@@ -79,6 +80,15 @@ def c():
 
 def d():
     raise ValueError('I don\'t know what comes after "d"')
+
+
+class MyTaskify(Taskify):
+    def __init__(self, func, name=None, foo=None):
+        self.foo = foo
+        super().__init__(func, name=name)
+
+    def __call__(self, *args, **kwargs):
+        return super().__call__(*args, **kwargs) + 2
 
 
 ###############################################################################

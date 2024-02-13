@@ -1,9 +1,10 @@
 import datetime
 
+from croniter import croniter
 from django.conf import settings
 from django.utils import timezone
-from croniter import croniter
 
+from .models import Task
 from .utils import parse_timedelta
 
 
@@ -48,6 +49,27 @@ class ScheduledTask:
     def is_due(self):
         now = timezone.now()
         return self.due_at <= now
+
+    @property
+    def as_task(self):
+        """
+        Note that the returned Task is not saved in database, you still need to call.save() on it.
+        """
+        task = Task()
+        task.name = self.name
+        task.due_at = self.due_at
+        task.function_name = self.function_name
+        task.encode_function_args(kwargs=self.args)
+        task.max_retries = self.max_retries
+        task.retry_delay = self.retry_delay
+        task.retry_backoff = self.retry_backoff
+        task.retry_backoff_factor = self.retry_backoff_factor
+        task.timeout = self.timeout
+
+        return task
+
+    def create_task(self):
+        self.as_task.save()
 
 
 class Scheduler:

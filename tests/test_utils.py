@@ -2,8 +2,7 @@ import datetime
 
 from django.test import TransactionTestCase
 
-from taskq.utils import parse_timedelta, task_from_scheduled_task, ordinal
-from taskq.scheduler import ScheduledTask
+from taskq.utils import parse_timedelta, ordinal
 
 
 class UtilsParseTimedeltaTestCase(TransactionTestCase):
@@ -31,32 +30,6 @@ class UtilsParseTimedeltaTestCase(TransactionTestCase):
             TypeError, parse_timedelta, datetime.datetime(year=2000, month=4, day=20)
         )
         self.assertRaises(TypeError, parse_timedelta, [2, 45])
-
-
-class UtilsTaskFromScheduledTaskTestCase(TransactionTestCase):
-    def test_can_create_task_from_scheduled_task(self):
-        """task_from_scheduled_task creates a new Task from a ScheduledTask."""
-        args = {"flour": 300, "pumpkin": True}
-        scheduled_task = ScheduledTask(
-            name="Cooking pie",
-            task="kitchen.chef.cook_pie",
-            cron="0 19 * * *",
-            args=args,
-            max_retries=1,
-            retry_delay=22,
-            retry_backoff=True,
-            retry_backoff_factor=2,
-        )
-
-        task = task_from_scheduled_task(scheduled_task)
-        self.assertIsNotNone(task)
-        self.assertEqual(task.name, "Cooking pie")
-        self.assertEqual(task.function_name, "kitchen.chef.cook_pie")
-        self.assertEqual(task.function_args, {"flour": 300, "pumpkin": True})
-        self.assertEqual(task.max_retries, 1)
-        self.assertEqual(task.retry_delay, datetime.timedelta(seconds=22))
-        self.assertEqual(task.retry_backoff, True)
-        self.assertEqual(task.retry_backoff_factor, 2)
 
 
 class UtilsOrdinalTestCase(TransactionTestCase):

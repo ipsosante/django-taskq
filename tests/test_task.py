@@ -1,11 +1,10 @@
 import datetime
 
-from django.test import TestCase, TransactionTestCase
+from django.test import TestCase, TransactionTestCase, override_settings
 from django.utils import timezone
 
-from taskq.task import Taskify, taskify
-from taskq.models import Task
-
+from taskq.models import Task, Taskify
+from taskq.task import taskify
 from . import fixtures
 
 
@@ -43,6 +42,27 @@ class TaskifyDecoratorTestCase(TestCase):
         parameters).
         """
         self.assertIsInstance(fixtures.do_nothing_with_parenthesis, Taskify)
+
+    def test_can_use_taskify_subclass_as_base(self):
+        @taskify(base=fixtures.MyTaskify, foo="bar")
+        def my_function():
+            return 40
+
+        self.assertIsInstance(my_function, fixtures.MyTaskify)
+        self.assertEqual(my_function.name, "tests.test_task.my_function")
+        self.assertEqual(my_function.foo, "bar")
+        self.assertEqual(my_function(), 42)
+
+    @override_settings(TASKQ={"default_taskify_class": "tests.fixtures.MyTaskify"})
+    def test_can_define_default_taskify_class_in_settings(self):
+        @taskify(foo="bar")
+        def my_function():
+            return 40
+
+        self.assertIsInstance(my_function, fixtures.MyTaskify)
+        self.assertEqual(my_function.name, "tests.test_task.my_function")
+        self.assertEqual(my_function.foo, "bar")
+        self.assertEqual(my_function(), 42)
 
 
 class TaskifyApplyTestCase(TestCase):
