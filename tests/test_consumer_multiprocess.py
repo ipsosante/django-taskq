@@ -15,7 +15,6 @@ from . import fixtures
 
 
 class ConsumerMultiProcessTestCase(TransactionTestCase):
-
     # To run these tests, create_background_consumers uses threads.
     # This is not compatible with current timeout implementation based on signals.
     # Hence we force timeout at 0.

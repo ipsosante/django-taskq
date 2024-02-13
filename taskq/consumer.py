@@ -1,4 +1,3 @@
-import importlib
 import logging
 import threading
 from time import sleep
@@ -11,11 +10,10 @@ from django.utils import timezone
 from django_pglocks import advisory_lock
 
 from .constants import TASKQ_DEFAULT_CONSUMER_SLEEP_RATE, TASKQ_DEFAULT_TASK_TIMEOUT
-from .exceptions import Cancel, TaskLoadingError, TaskFatalError
+from .exceptions import Cancel, TaskFatalError
 from .models import Task
 from .scheduler import Scheduler
-from .task import Taskify
-from .utils import task_from_scheduled_task, traceback_filter_taskq_frames, ordinal
+from .utils import traceback_filter_taskq_frames, ordinal
 
 logger = logging.getLogger("taskq")
 
@@ -85,8 +83,7 @@ class Consumer:
                 if task_exists:
                     continue
 
-                task = task_from_scheduled_task(scheduled_task)
-                task.save()
+                scheduled_task.create_task()
 
         self._scheduler.update_all_tasks_due_dates()
 
@@ -167,8 +164,8 @@ class Consumer:
             logger.info("%s : Started (%s retry)", task, nth)
 
         def _execute_task():
-            function, args, kwargs = self.load_task(task)
-            self.execute_task(function, args, kwargs)
+            with transaction.atomic():
+                task.execute()
 
         try:
             task.status = Task.STATUS_RUNNING
@@ -218,37 +215,3 @@ class Consumer:
         type_name = type(error).__name__
         exc_info = (type(error), error, exc_traceback)
         logger.exception("%s : %s %s", task, type_name, error, exc_info=exc_info)
-
-    def load_task(self, task):
-        function = self.import_taskified_function(task.function_name)
-        args, kwargs = task.decode_function_args()
-
-        return (function, args, kwargs)
-
-    def import_taskified_function(self, import_path):
-        """Load a @taskified function from a python module.
-
-        Returns TaskLoadingError if loading of the function failed.
-        """
-        # https://stackoverflow.com/questions/3606202
-        module_name, unit_name = import_path.rsplit(".", 1)
-        try:
-            module = importlib.import_module(module_name)
-        except (ImportError, SyntaxError) as e:
-            raise TaskLoadingError(e)
-
-        try:
-            obj = getattr(module, unit_name)
-        except AttributeError as e:
-            raise TaskLoadingError(e)
-
-        if not isinstance(obj, Taskify):
-            msg = f'Object "{import_path}" is not a task'
-            raise TaskLoadingError(msg)
-
-        return obj
-
-    def execute_task(self, function, args, kwargs):
-        """Execute the code of the task"""
-        with transaction.atomic():
-            function._protected_call(args, kwargs)

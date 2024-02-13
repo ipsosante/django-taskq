@@ -7,7 +7,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [("taskq", "0002_add_retry_delay")]
 
     operations = [

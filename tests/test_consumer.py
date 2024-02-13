@@ -8,7 +8,6 @@ from django.test import TransactionTestCase, override_settings
 from django.utils.timezone import now
 
 from taskq.consumer import Consumer
-from taskq.exceptions import TaskLoadingError
 from taskq.models import Task
 from .utils import create_task, create_background_consumers
 
@@ -129,7 +128,6 @@ class ConsumerTestCase(TransactionTestCase):
         tasks = [create_task() for _ in range(task_count)]
 
         with self.assertLogs("taskq", level="ERROR") as taskq_error_logger_check:
-
             with patch.object(Task, "save", autospec=True) as mock_task_save:
                 running_tasks = set()
                 error_task = None
@@ -182,7 +180,15 @@ class ConsumerTestCase(TransactionTestCase):
         relevant_lines = [l for i, l in enumerate(lines) if i % 2 == 0]
 
         # Check that we are getting the expected function names in the traceback
-        expected_functions = ["_protected_call", "failing_alphabet", "a", "b", "c", "d"]
+        expected_functions = [
+            "_protected_call",
+            "__call__",
+            "failing_alphabet",
+            "a",
+            "b",
+            "c",
+            "d",
+        ]
         for i, expected_function in enumerate(expected_functions):
             self.assertIn(expected_function, relevant_lines[i])
 
@@ -280,8 +286,7 @@ class ConsumerTestCase(TransactionTestCase):
         }
     )
     def test_consumer_create_task_for_due_scheduled_task(self):
-        """Consumer creates tasks for each scheduled task defined in settings.
-        """
+        """Consumer creates tasks for each scheduled task defined in settings."""
         consumer = Consumer()
 
         # Hack the due_at date to simulate the fact that the task was run once
@@ -322,51 +327,3 @@ class ConsumerTestCase(TransactionTestCase):
 
         self.assertIn(task.uuid, output)
         self.assertIn("Started (1st retry)", output)
-
-
-class ImportTaskifiedFunctionTestCase(TransactionTestCase):
-    def test_can_import_existing_task(self):
-        """Consumer can import a valid and existing @taskified function."""
-        consumer = Consumer()
-        func = consumer.import_taskified_function("tests.fixtures.do_nothing")
-        self.assertIsNotNone(func)
-
-    def test_fails_import_non_taskified_functions(self):
-        """Consumer raises when trying to import a function not decorated with
-        @taskify.
-        """
-        consumer = Consumer()
-        self.assertRaises(
-            TaskLoadingError,
-            consumer.import_taskified_function,
-            "tests.fixtures.naked_function",
-        )
-
-    def test_fails_import_non_existing_module(self):
-        """Consumer raises when trying to import a function from a non-existing
-        module.
-        """
-        consumer = Consumer()
-        self.assertRaises(
-            TaskLoadingError, consumer.import_taskified_function, "tests.foobar.nope"
-        )
-
-    def test_fails_import_non_existing_function(self):
-        """Consumer raises when trying to import a non-existing function."""
-        consumer = Consumer()
-        self.assertRaises(
-            TaskLoadingError,
-            consumer.import_taskified_function,
-            "tests.fixtures.not_a_known_function",
-        )
-
-    def test_fails_import_function_syntax_error(self):
-        """Consumer raises when trying to import a function with a Python
-        syntax error.
-        """
-        consumer = Consumer()
-        self.assertRaises(
-            TaskLoadingError,
-            consumer.import_taskified_function,
-            "tests.fixtures_broken.broken_function",
-        )

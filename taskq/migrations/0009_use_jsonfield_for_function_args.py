@@ -5,15 +5,18 @@ import taskq.json
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('taskq', '0008_alter_task_status'),
+        ("taskq", "0008_alter_task_status"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='task',
-            name='function_args',
-            field=models.JSONField(decoder=taskq.json.JSONDecoder, default=dict, encoder=taskq.json.JSONEncoder),
+            model_name="task",
+            name="function_args",
+            field=models.JSONField(
+                decoder=taskq.json.JSONDecoder,
+                default=dict,
+                encoder=taskq.json.JSONEncoder,
+            ),
         ),
     ]
